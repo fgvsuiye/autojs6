@@ -133,7 +133,7 @@ function qd() {
     img2.recycle();
     var img =images.read("/sdcard/Pictures/pictures.png");
     var g = images.grayscale(img);
-    var result =images.threshold(g, 120, 155);
+    var result =images.threshold(g, 110, 155);
     images.save(result,"/sdcard/Pictures/result.png", "png", 100);
     img.recycle();
     var image = images.read("/sdcard/Pictures/result.png");
