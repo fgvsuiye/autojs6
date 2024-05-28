@@ -184,7 +184,7 @@ function qd() {
         var done = textContains("已签到").findOne(4000);
         if (done) {
             log("签到完成");
-            
+            return;
         } else{
             log("签到失败");  
         }
