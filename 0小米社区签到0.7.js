@@ -326,7 +326,7 @@ function swipeBezier(sx, sy, ex, ey){
 
 //拔萝卜活动
 function see(){
-    swipeBezier(500, 1500, 700, 500)
+    swipe(500, 1500, 700, 500, 800)
     var button = textContains("去看看").findOne(1500).click();
     if (button) {
         log("拔萝卜活动签到");
