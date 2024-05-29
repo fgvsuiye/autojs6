@@ -1,12 +1,15 @@
 原作者@PJxiaoyu
 
 小米社区自动浏览帖子，签到，过滑块验证。
-
 1080分辨率可用，其它分辨率可能出错。
+
+autojs有多个版本，各版本有差异。
+建议使用autojs6
+下载地址：
+https://wwl.lanzouj.com/ibegp205yhaj
 
 
 需将验证码界面截图，自行裁切滑块保存至/sdcard/Pictures/hk.png，
-
 
 
 /*
