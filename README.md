@@ -7,10 +7,9 @@
 autojs有多个版本，各版本有差异。
 
 建议使用autojs6
+[点击下载](https://wwl.lanzouj.com/ibegp205yhaj)
 
-下载地址：
 
-https://wwl.lanzouj.com/ibegp205yhaj
 
 
 
