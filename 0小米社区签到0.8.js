@@ -17,6 +17,9 @@ V0.6修改内容如下：
 
 V0.7修改内容如下：
 1. 增加了滑动方式，随机选择由快至慢滑动或贝塞尔曲线滑动。
+
+V0.8修改内容如下：
+1. 滑动起始位置不再固定为滑块中心，x与y轴添加随机偏移，并相应的修改滑动终点。
 */
 
 run();//计时
@@ -174,12 +177,18 @@ function qd() {
         }
     if (len > -1) {
         log("开始模拟滑动");
+        var random1 = parseInt(random(-30,30))
+        let xyDis = len - centerX;
+        let sx = centerX + random1;
+        let ex = sx + xyDis;
+        let sy = centerY + random1;
+        let ey = centerY + parseInt(random(-30,30));
         if(parseInt(random(1,2)) == 1){
             log("由快至慢滑动");
-            swipeFastToslow(centerX, centerY, len, centerY);
+            swipeFastToslow(sx, sy, ex, ey);
         }else{
             log("贝塞尔曲线滑动");
-            swipeBezier(centerX, centerY, len, centerY);
+            swipeBezier(sx, sy, ex, ey);
         }
         var done = textContains("已签到").findOne(4000);
         if (done) {
