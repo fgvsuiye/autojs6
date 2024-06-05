@@ -54,8 +54,8 @@ function killAPP(name){
     var packageName=app.getPackageName(name)
     app.openAppSetting(packageName)
     while(true){
-       if(text("结束运行").exists()){
-            click("结束运行");
+       if(text("结束运行"|"强行停止").exists()){
+            click("结束运行"|"强行停止");
             sleep(500);
             while(true){
                 if(textContains("确定").exists()){
