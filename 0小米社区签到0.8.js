@@ -520,10 +520,11 @@ function ganenji(){
         } else {
             console.log("今日无解锁次数");
         }
+    back()
     }else{
         log("未找到活动入口")
     }
-    back()
+    
 }
 //运行时间
 function run() { 
