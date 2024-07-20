@@ -22,10 +22,14 @@ V0.8修改内容如下：
 1. 滑动起始位置不再固定为滑块中心，x与y轴添加随机偏移，并相应的修改滑动终点。
 
 240705:
-    添加解锁方式，根据需求修改第27，28行代码。
+    添加解锁方式。
+240720:
+    添加加入圈子活动和感恩季活动
 */
-var UnlockType = 1 // 根据需求修改，1为图案解锁，2为数字密码解锁，其它任意值默认为上滑解锁。
+var unlockType = 1 // 根据需求修改，1为图案解锁，2为数字密码解锁，其它任意值默认为上滑解锁。
 var password = "000000" //解锁方式为数字密码时，将此处数字修改为自己的解锁密码。
+// 解锁方式为图案解锁时，将下列点位修改为自己的图案坐标。
+var gestureArray = [[284, 1479], [540, 1479], [540, 1732], [284, 1987], [540, 1987], [792, 1987]]
 run();//计时
 curTime = new Date();
 date = curTime.getFullYear() + "-" + (curTime.getMonth() + 1) + "-" + curTime.getDate();
@@ -48,10 +52,10 @@ function unLock(){
     sleep(1000);
     gesture(100, [540, 1900], [540, 1200]);    // 滑动解锁
     sleep(1000);
-    if (UnlockType == 1){
+    if (unlockType == 1){
         log("图案解锁")
-        gesture(800, [284, 1479], [540, 1479], [540, 1732], [284, 1987], [540, 1987], [792, 1987]);    // 模拟滑动操作
-    }else if(UnlockType == 2){
+        gesture(800,gestureArray);  // 模拟滑动操作
+    }else if(unlockType == 2){
         log("数字密码解锁")
         for(i = 0; i < password.length; i++){
             desc(password[i]).findOne().click()
@@ -84,7 +88,7 @@ function killAPP(name){
 }
 
 //浏览帖子
-function posts(){
+function posts(n){
     var regex = /((0[0-9]|1[0-9]|2[0-3]):(0[0-9]|[1-5][0-9]))|(0[0-9]|1[0-9]|2[0-3])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])|(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/;
     var textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(); 
     if (textView) { 
@@ -93,9 +97,18 @@ function posts(){
         sleep(13000);
         log("浏览10s完成");
         back();
+        return
     }
     else{
-        log("打开帖子失败")
+        log("第"+n+"次重试")
+        swipe(device.width*4/5,device.height*3/4,device.width*2/5,device.height*1/4, 1500)
+        if(n > 3){
+            log("打开帖子失败")      
+            return;
+        }
+        if(n <= 3){
+            return posts(n+1);
+        }
     }
 }
 
@@ -463,7 +476,55 @@ function logpercentage(){
     log("当前签到+1的概率：" + percentage)
     return percentage;
 }
-
+//加入圈子活动
+function join(){
+    let qujiaru = className("android.widget.Button").text("去加入").findOne(3000)
+    if(qujiaru){
+        qujiaru.click()
+        let join = className("android.widget.Button").text("加入圈子").findOne(3000).click()
+        if(join){
+            log("加入圈子成功")
+        }else{
+            log("未找到加入按钮")
+        }
+        sleep(2000)
+        back()
+    }
+}
+//感恩季活动
+function ganenji(){
+    let qucanyu = className("android.widget.Button").text("去参加").findOne(3000).click();
+    if(qucanyu){
+        sleep(2000)
+        let jpso = className('TextView').text('可解锁').find()
+        let count = className("android.widget.Button").text("去提升").findOne(3000).parent().child(1).text()
+        if (jpso.size() > 0 && count > 0) {
+            for (var i = 0; i < jpso.size(); i++) {
+                var control = jpso.get(i);
+                if(count < 1 || newcount < 1){
+                    log("解锁次数不足")
+                    break;
+                }
+                control.click();
+                log("第" + (i+1) + "次解锁")
+                let xuanyao = className("android.widget.Button").text("炫耀一下").findOne(1000);
+                let tisheng = className("android.widget.TextView").text("等待解锁").depth(15).findOne(1000)
+                if(xuanyao){
+                    xuanyao.parent().child(5).click()
+                }else if(tisheng){
+                    tisheng.parent().child(6).click()
+                }
+                sleep(1000)
+                let newcount = className("android.widget.Button").text("去提升").findOne(3000).parent().child(1).text()
+            }
+        } else {
+            console.log("今日无解锁次数");
+        }
+    }else{
+        log("未找到活动入口")
+    }
+    back()
+}
 //运行时间
 function run() { 
     threads.start(function(){ 
@@ -488,8 +549,7 @@ function start(){
     }
     else{
         findCenter(); 
-        see();
-        level();
+        
     }
 }
 
@@ -513,12 +573,15 @@ function main(){
         tg.click();
         console.log("跳过了广告");
     }
-    posts();
+    posts(1);
     className("android.widget.ImageView").desc("签到").findOne().click();
     log("打开签到页面");
     percentage = logpercentage();
     start();
-    
+    join()
+    ganenji();
+    see();
+    level();
     //fans();
     //watchVideo();   
     killAPP("小米社区");
