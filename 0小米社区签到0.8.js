@@ -501,7 +501,7 @@ function ganenji(){
         if (jpso.size() > 0 && count > 0) {
             for (var i = 0; i < jpso.size(); i++) {
                 var control = jpso.get(i);
-                if(count < 1 || newcount < 1){
+                if(count < 1){
                     log("解锁次数不足")
                     break;
                 }
@@ -515,7 +515,10 @@ function ganenji(){
                     tisheng.parent().child(6).click()
                 }
                 sleep(1000)
-                let newcount = className("android.widget.Button").text("去提升").findOne(3000).parent().child(1).text()
+                if(className("android.widget.TextView").text("可获得1次解锁机会").exists()){
+                    log("解锁次数不足")
+                    break
+                }
             }
         } else {
             console.log("今日无解锁次数");
