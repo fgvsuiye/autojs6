@@ -82,8 +82,17 @@ function killAPP(name){
                 }
                 break;
             }
-            break;
+        }else{
+           let end = className("android.widget.LinearLayout").desc("结束运行").findOne(2000)
+           if(end){
+               end.click()
+               sleep(1000)
+               click("确定")
+               log("结束小米社区");
+               sleep(500);
+            }
         }
+        break;
     }
 }
 
@@ -524,6 +533,7 @@ function ganenji(){
             console.log("今日无解锁次数");
         }
     back()
+    slepp(1000)
     }else{
         log("未找到活动入口")
     }
