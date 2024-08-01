@@ -87,9 +87,11 @@ function killAPP(name){
            if(end){
                end.click()
                sleep(1000)
-               click("确定")
-               log("结束小米社区");
-               sleep(500);
+               if(textContains("确定").exists()){
+                   click("确定")
+                   log("结束小米社区");
+                   sleep(500);
+                }
             }
         }
         break;
