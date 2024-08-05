@@ -535,7 +535,7 @@ function ganenji(){
             console.log("今日无解锁次数");
         }
     back()
-    slepp(1000)
+    sleep(1000)
     }else{
         log("未找到活动入口")
     }
