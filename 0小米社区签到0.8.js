@@ -1,4 +1,8 @@
 /*
+*   autojs需要各种权限，左侧边栏内的权限都打开可解决大部分问题！！    
+*   autojs需要各种权限，左侧边栏内的权限都打开可解决大部分问题！！    
+*   autojs需要各种权限，左侧边栏内的权限都打开可解决大部分问题！！
+
 原作者  by：PJ小宇    QQ：898811295
 修改    by：风中拾叶
 V0.5修改内容如下：
@@ -59,6 +63,7 @@ function unLock(){
         log("数字密码解锁")
         for(i = 0; i < password.length; i++){
             desc(password[i]).findOne().click()
+            sleep(100)
         }
     }
     log("解锁完成");
