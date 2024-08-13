@@ -62,7 +62,7 @@ function unLock(){
     }else if(unlockType == 2){
         log("数字密码解锁")
         for(i = 0; i < password.length; i++){
-            desc(password[i]).findOne().click()
+            desc(password[i]).findOne(2000).click()
             sleep(100)
         }
     }
@@ -106,7 +106,7 @@ function killAPP(name){
 //浏览帖子
 function posts(n){
     var regex = /((0[0-9]|1[0-9]|2[0-3]):(0[0-9]|[1-5][0-9]))|(0[0-9]|1[0-9]|2[0-3])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])|(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/;
-    var textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(); 
+    var textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(8000); 
     if (textView) { 
         textView.click(); 
         log("打开帖子");
@@ -485,7 +485,7 @@ function readfile(filePath) {
 
 //签到+1概率
 function logpercentage(){
-    var percentageUi = className("android.widget.TextView").textContains("当前签到+1的概率：").findOne()
+    var percentageUi = className("android.widget.TextView").textContains("当前签到+1的概率：").findOne(5000)
     var percentageText = percentageUi.text()
     var regex = "\\d{1,3}(?:\\.\\d{1,3}?%)";
     var percentage = percentageText.match(regex)[0]
@@ -595,7 +595,7 @@ function main(){
         console.log("跳过了广告");
     }
     posts(1);
-    className("android.widget.ImageView").desc("签到").findOne().click();
+    className("android.widget.ImageView").desc("签到").findOne(10000).click();
     log("打开签到页面");
     percentage = logpercentage();
     start();
