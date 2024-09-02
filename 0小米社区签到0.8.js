@@ -485,12 +485,16 @@ function readfile(filePath) {
 
 //签到+1概率
 function logpercentage(){
-    var percentageUi = className("android.widget.TextView").textContains("当前签到+1的概率：").findOne(5000)
-    var percentageText = percentageUi.text()
-    var regex = "\\d{1,3}(?:\\.\\d{1,3}?%)";
-    var percentage = percentageText.match(regex)[0]
-    log("当前签到+1的概率：" + percentage)
-    return percentage;
+    var percentageUi = className("android.widget.TextView").textContains("当前签到+1的概率：").findOne(6000)
+    if(percentageUi){
+        var percentageText = percentageUi.text()
+        var regex = "\\d{1,3}(?:\\.\\d{1,3}?%)";
+        var percentage = percentageText.match(regex)[0]
+        log("当前签到+1的概率：" + percentage)
+        return percentage;
+    }else{
+        log("未找到签到概率的文本")
+    }
 }
 //加入圈子活动
 function join(){
@@ -599,7 +603,7 @@ function main(){
     log("打开签到页面");
     percentage = logpercentage();
     start();
-    join()
+    //join()
     ganenji();
     see();
     level();
