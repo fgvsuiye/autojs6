@@ -106,14 +106,14 @@ function killAPP(name){
 //浏览帖子
 function posts(n){
     var regex = /((0[0-9]|1[0-9]|2[0-3]):(0[0-9]|[1-5][0-9]))|(0[0-9]|1[0-9]|2[0-3])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])|(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/;
-    var textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(8000); 
+    var textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(2000); 
+    let pkly = className("android.widget.ImageView").desc("评论").findOne(2000)
+    
     if (textView) { 
         textView.click(); 
-        log("打开帖子");
-        sleep(13000);
-        log("浏览10s完成");
-        back();
-        return
+    }
+    else if (pkly){
+        pkly.click();
     }
     else{
         log("第"+n+"次重试")
@@ -126,8 +126,12 @@ function posts(n){
             return posts(n+1);
         }
     }
+    log("打开帖子");
+    sleep(13000);
+    log("浏览10s完成");
+    back();
+    return
 }
-
 //寻找坐标
 function findCenter() {
     textContains("立即签到").findOne(2000).click();
@@ -604,7 +608,7 @@ function main(){
     percentage = logpercentage();
     start();
     //join()
-    ganenji();
+    //ganenji();
     see();
     level();
     //fans();
