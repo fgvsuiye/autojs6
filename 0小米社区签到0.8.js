@@ -517,7 +517,7 @@ function join(){
 }
 //感恩季活动
 function ganenji(){
-    let qucanyu = className("android.widget.Button").text("去参加").findOne(3000).click();
+    let qucanyu = className("android.widget.Button").text("去参与").findOne(3000).click();
     if(qucanyu){
         sleep(2000)
         let jpso = className('TextView').text('可解锁').find()
@@ -608,7 +608,7 @@ function main(){
     percentage = logpercentage();
     start();
     //join()
-    //ganenji();
+    ganenji();
     see();
     level();
     //fans();
