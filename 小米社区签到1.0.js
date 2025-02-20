@@ -562,10 +562,12 @@ function 解锁() {
 function 小程序签到(){
     home()
     sleep(1000)
-    
     home()
+    sleep(1000)
     let tr = className("android.widget.ImageView").desc("第3屏").findOne(15000).click()
+    sleep(300)
     let shequ = className("android.widget.TextView").text("小米社区").findOne(15000).click()
+    sleep(300)
     let 我的 = id("a0g").className("android.widget.TextView").text("我的").findOne(15000).parent().parent().click()
     if (我的){
         className("android.widget.TextView").text("每日签到").waitFor()
