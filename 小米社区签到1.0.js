@@ -17,12 +17,10 @@ log(`今天是：${date}`);
 sleep(500);
 var centerX;
 var centerY;
-var len;
-var done;
-var p2;
 var rX;
-var watch;
 var percentage;
+var dwidth = device.width;
+var dheight = device.height;
 main();
 
 //解锁
@@ -30,7 +28,11 @@ function unLock() {
     device.keepScreenOn(3600 * 1000);
     log("开始解锁设备");
     sleep(1000);
-    gesture(100, [540, 1900], [540, 1200]);    // 滑动解锁
+    if(swipe(dwidth*2/3, dheight*2/3, dwidth*1/3, dheight*1/3, 300)){
+        log("上滑成功");
+    }else{
+        gesture(100,[dwidth*2/3, dheight*2/3] , [dwidth*1/3, dheight*1/3]);
+    }
     sleep(1000);
     if (config.解锁方式 == 1) {
         log("图案解锁");
@@ -87,7 +89,7 @@ function posts(n){
     }
     else{
         log("第"+n+"次重试")
-        swipe(device.width*4/5,device.height*3/4,device.width*2/5,device.height*1/4, 1500)
+        swipe(dwidth*4/5,dheight*3/4,dwidth*2/5,dheight*1/4, 1500)
         if(n > 3){
             log("打开帖子失败")      
             return;
@@ -112,7 +114,7 @@ function findCenter() {
         exit();
     } 
     sleep(5000)
-    var pictures2 = images.clip(captureScreen(),0,0,device.width,device.height);
+    var pictures2 = images.clip(captureScreen(),0,0,dwidth,dheight);
     images.save(pictures2,"/sdcard/Pictures/pictures2.png","png",100);
     var img2 =images.read("/sdcard/Pictures/pictures2.png");
     var wx = images.read("/sdcard/Pictures/hk.png");
@@ -141,13 +143,16 @@ function findCenter() {
 }
 
 //签到
-function qd() {   
+function qd() {
+    var len;   
+    var con = config.con;
+    var sta = "10(0{"+con+",})1"
     if (!images.requestScreenCapture()) {
         log('请求截图失败');
         exit();
     }
     var img2 =images.read("/sdcard/Pictures/pictures2.png");
-    var pictures = images.clip(img2,rX,device.height*1/3+30,device.width*5/6-rX,pY-device.height*1/3-30);
+    var pictures = images.clip(img2,rX,dheight*1/3+30,dwidth*5/6-rX,pY-dheight*1/3-30);
     images.save(pictures,"/sdcard/Pictures/pictures.png","png",100);
     img2.recycle();
     var img =images.read("/sdcard/Pictures/pictures.png");
@@ -171,7 +176,8 @@ function qd() {
             s+= ss;
         }
         files.append(path, s +"\n");
-        var matches = s.match(/10(0{50,})1/g)
+        //var matches = s.match(/10(0{50,})1/g)
+        var matches = s.match(new RegExp(sta,"g"));
         if (matches) {
             var sum = 0;
             for (let i = 0;i < matches[0].length;i++){
@@ -186,14 +192,14 @@ function qd() {
         }
     }
     len =-1;
-        var index = s.indexOf(matches);
-        if (index >-1){
-            len = rX+index*2+length;
-            log("缺口中心:"+len);
-        }
+    let index = s.indexOf(matches);
+    if (index >-1){
+        len = rX+index*2+length;
+        log("缺口中心:"+len);
+    }
     if (len > -1) {
         log("开始模拟滑动");
-        var random1 = parseInt(random(-10,10))
+        let random1 = parseInt(random(-10,10))
         let xyDis = len - centerX;
         let sx = centerX + random1;
         let ex = sx + xyDis;
@@ -217,44 +223,6 @@ function qd() {
     }
 }
 
-// 由快至慢滑动
-function swipeFastToslow(x1, y1, x2, y2) {
-    swipe2(x1, y1, x2, y2);
-    function swipe2(x1, y1, x2, y2) {
-        
-        let x4 = (x2 - 100) < x1 ? x1 : x2 - 100
-        let times = (parseInt((x4 - x1) / 3) + 200 + (x2 - x4) * 5) * 5
-        //console.log("滑动用时:"+times);
-        let posArr = [0,times]; //滑动坐标数组
-
-        for(let i=x1;i <=x4;i+=3){
-            posArr.push(pushPosArr(i,y2))
-        }
-
-        let stayX = posArr[posArr.length-1][0];
-        for(let i = stayX;i <= (stayX+2);i+=0.01){
-        posArr.push([i,y2]);
-        }
-
-        x4 = x4 + 2;
-        for(let i = x4; i <= x2; i+=0.2){
-        posArr.push(pushPosArr(i,y2))
-        }
-
-        gestures(posArr);
-    }
-    function pushPosArr(x,y){
-        let y2 = randomNum(y-5, y+5);
-        return [x,y2];
-    }
-
-    function randomNum(min, max) {
-        // console.log(min,max);
-        let r = Math.floor(Math.random() * (max - min + 1) + min);
-        // console.log(r);
-        return r;
-    }
-}
 // 贝塞尔曲线滑动
 function swipeBezierzier(sx, sy, ex, ey){
     function bezierCreate(x1,y1,x2,y2,x3,y3,x4,y4){
@@ -499,8 +467,8 @@ function 活动1() {
             if(checkBox){
                 register.click()
                 sleep(2000)
-                let x = device.width * 0.74
-                let y = device.height * 0.94
+                let x = dwidth * 0.74
+                let y = dheight * 0.94
                 click(x,y)
                 sleep(1000)
                 }
@@ -565,8 +533,12 @@ function 小程序签到(){
     home()
     sleep(1000)
     let tr = className("android.widget.ImageView").desc("第3屏").findOne(15000).click()
-    sleep(300)
-    let shequ = className("android.widget.TextView").text("小米社区").findOne(15000).click()
+    sleep(1000)
+    if(config.坐标点击){
+        click(config.x,config.y)
+    }else{
+        let shequ = className("android.widget.TextView").text("小米社区").findOne(15000).click()
+    }
     sleep(300)
     let 我的 = id("a0g").className("android.widget.TextView").text("我的").findOne(15000).parent().parent().click()
     if (我的){
@@ -643,7 +615,7 @@ function main() {
         sleep(500);
         unLock();
     }
-    
+    log("设备分辨率：" + dwidth + "x" + dheight);
     device.keepScreenOn();
     let musicVolume = device.getMusicVolume();
     device.setMusicVolume(0);
@@ -653,7 +625,7 @@ function main() {
     
     skipAd(); 
     if (config.浏览帖子) posts(1);
-    let sign = className("android.widget.ImageView").desc("签到").findOne(5000).click();
+    let sign = className("android.widget.ImageView").desc("签到").findOne(10000).click();
     if (sign){
         log("打开签到页面");
         percentage = logpercentage();
