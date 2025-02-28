@@ -532,7 +532,13 @@ function 小程序签到(){
     sleep(1000)
     home()
     sleep(1000)
-    let tr = className("android.widget.ImageView").desc("第3屏").findOne(15000).click()
+    let tr = className("android.widget.ImageView").desc("第3屏").findOne(10000)
+    if(tr){
+        tr.click()
+    }else{
+        log("找不到第三屏")
+        return
+    }
     sleep(1000)
     if(config.坐标点击){
         click(config.x,config.y)
@@ -550,6 +556,7 @@ function 小程序签到(){
             let qd = className("android.widget.TextView").text("去签到").findOne(15000)
             if (qd) {
                 qd.click()
+                sleep(1000)
                 log("小程序签到完成")
             }
         }
