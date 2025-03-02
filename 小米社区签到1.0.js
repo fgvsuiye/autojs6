@@ -536,9 +536,16 @@ function 解锁() {
 
 function 小程序签到(){
     let tr = className("android.widget.ImageView").desc("第3屏")
-    while(!tr.exists()){
-        home()
-        sleep(100)
+    for (let i = 0; i < 20; i++) {
+        home();
+        sleep(300)
+        if (tr.exists()) {
+            break;
+        }
+        if(i == 19){
+            log("未找到小程序入口")
+            return
+        }
     }
     tr.click()
     sleep(1000)
