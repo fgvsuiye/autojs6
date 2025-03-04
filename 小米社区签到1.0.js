@@ -548,34 +548,53 @@ function 小程序签到(){
         }
     }
     tr.click()
-    sleep(1000)
+    sleep(3000)
     while(!(className("android.widget.ImageButton").desc("更多").clickable(true).exists())){
         if(config.坐标点击){
             click(config.x,config.y)
             log("点击" + config.x + "," + config.y)
             sleep(300)
         }else{
-            className("android.widget.TextView").text("小米社区").findOne(5000).click()
+            className("android.widget.TextView").text("小米社区").desc('小米社区').findOne(5000).click()
+            log("点击小米社区")
+            sleep(1000)
+            break;
         }
     }
-    let 我的 = id("a0g").className("android.widget.TextView").text("我的").findOne(15000).parent().parent().click()
-    if (我的){
-        className("android.widget.TextView").text("每日签到").waitFor()
-        sleep(500)
-        if(className("android.widget.TextView").text("已签到").exists()){
-            log("小程序已签到")
+    log("进入小程序")
+    let 我的 = id("a0g").className("android.widget.TextView").text("我的").depth(14).indexInParent(1)
+    let edit = className('TextView').text('编辑资料').depth(24)
+    let cont = 0
+    while (true){
+        if(edit.exists()){
+            log("进入我的页面")
+            break
         }else{
-            let qd = className("android.widget.TextView").text("去签到").findOne(15000)
-            if (qd) {
-                qd.click()
-                log("小程序签到完成")
+            log("尚未进入我的页面")
+            我的.findOne(5000).parent().parent().click()
+            sleep(1500)
+            cont ++
+            if(cont > 10){
+                log("未找到我的页面")
+                return
             }
         }
+    }
+    className("android.widget.TextView").text("每日签到").waitFor()
+    sleep(500)
+    let signed = className("android.widget.TextView").text("已签到")
+    if(signed.exists()){
+        log("小程序已签到")
     }else{
-        log(我的)
+        let qd = className("android.widget.TextView").text("去签到").findOne(15000)
+        if (qd) {
+            while (!signed.exists()) {
+                qd.click();
+                sleep(200)
+            }
+        }
     }
 }
-
 //跳过广告
 function skipAd() {
     let adCloseBtn = className("android.widget.ImageView").desc("关闭").findOne(3000);
