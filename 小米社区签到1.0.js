@@ -1,4 +1,4 @@
-/*
+ /*
 
 *****小米社区自动签到脚本*****
 
@@ -29,10 +29,10 @@ function unLock() {
     device.keepScreenOn(3600 * 1000);
     log("开始解锁设备");
     sleep(1000);
-    if(swipe(dwidth*2/3, dheight*2/3, dwidth*1/3, dheight*1/3, 300)){
+    if(swipe(dwidth*1/2, dheight*0.96, dwidth*1/2, dheight*1/2, 300)){
         log("上滑成功");
     }else{
-        gesture(100,[dwidth*2/3, dheight*2/3] , [dwidth*1/3, dheight*1/3]);
+        gesture(100,[dwidth*1/2, dheight*0.96] , [dwidth*1/2, dheight*1/2]);
     }
     sleep(1000);
     if (config.解锁方式 == 1) {
