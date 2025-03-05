@@ -562,6 +562,11 @@ function 小程序签到(){
         }
     }
     log("进入小程序")
+    sleep(500)
+    let p = textContains('人浏览').findOne(10000)
+    if(p){
+        log("内容加载完成")
+    }
     let 我的 = id("a0g").className("android.widget.TextView").text("我的").depth(14).indexInParent(1)
     let edit = className('TextView').text('编辑资料').depth(24)
     let cont = 0
