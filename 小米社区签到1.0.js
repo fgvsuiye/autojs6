@@ -575,7 +575,7 @@ function 小程序签到(){
         }else{
             log("尚未进入我的页面")
             let me = id("a0g").className("android.widget.TextView").text("我的").findOne(4000)
-            if(me) me.click()
+            if(me) me.parent().parent().click()
             sleep(1500)
             cont ++
             if(cont > 3){
