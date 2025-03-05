@@ -575,10 +575,10 @@ function 小程序签到(){
             break
         }else{
             log("尚未进入我的页面")
-            我的.findOne(5000).parent().parent().click()
+            我的.findOne(3500).parent().parent().click()
             sleep(1500)
             cont ++
-            if(cont > 10){
+            if(cont > 3){
                 log("未找到我的页面")
                 return
             }
