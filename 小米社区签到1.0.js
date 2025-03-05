@@ -558,7 +558,6 @@ function 小程序签到(){
             className("android.widget.TextView").text("小米社区").desc('小米社区').findOne(5000).click()
             log("点击小米社区")
             sleep(1000)
-            break;
         }
     }
     log("进入小程序")
