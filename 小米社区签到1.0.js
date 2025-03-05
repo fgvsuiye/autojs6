@@ -566,7 +566,6 @@ function 小程序签到(){
     if(p){
         log("内容加载完成")
     }
-    let 我的 = id("a0g").className("android.widget.TextView").text("我的").depth(14).indexInParent(1)
     let edit = className('TextView').text('编辑资料').depth(24)
     let cont = 0
     while (true){
@@ -575,7 +574,8 @@ function 小程序签到(){
             break
         }else{
             log("尚未进入我的页面")
-            我的.findOne(3500).parent().parent().click()
+            let me = id("a0g").className("android.widget.TextView").text("我的").findOne(4000)
+            if(me) me.click()
             sleep(1500)
             cont ++
             if(cont > 3){
