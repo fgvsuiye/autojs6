@@ -9,8 +9,10 @@
 
 原作者@PJxiaoyu、@fgvsuiye
 
-###### 小米社区自动签到脚本！
+## 小米社区自动签到脚本！
 ### 功能：锁屏自动解锁，浏览帖子，签到，过滑块验证，小程序签到等。  
+
+[脚本下载入口](https://github.com/wengzhenquan/autojs6/releases)
 
 1080分辨率可用，其它分辨率可能出错。  
 
