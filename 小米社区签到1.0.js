@@ -1,4 +1,4 @@
- /*
+/*
 
 *****小米社区自动签到脚本*****
 
@@ -29,11 +29,20 @@ function unLock() {
     device.keepScreenOn(3600 * 1000);
     log("开始解锁设备");
     sleep(1000);
-    if(swipe(dwidth*1/2, dheight*0.96, dwidth*1/2, dheight*1/2, 300)){
-        log("上滑成功");
-    }else{
-        gesture(100,[dwidth*1/2, dheight*0.96] , [dwidth*1/2, dheight*1/2]);
-    }
+    wait(() => {
+        ran = random(-300,300)
+        swipe(dwidth*1/2, dheight*0.7+ran, dwidth*1/2, dheight*1/2+ran, 150)
+        sleep(1000)
+        return textContains("紧急呼叫").exists()
+        },10,200,{
+            then(){
+                log("上滑成功")
+            },
+            else(){
+                log("未找到解锁界面，签到退出")
+                exit()
+            },
+    });
     sleep(1000);
     if (config.解锁方式 == 1) {
         log("图案解锁");
@@ -48,60 +57,44 @@ function unLock() {
 //关闭程序
 function killAPP(packageName){
     app.openAppSetting(packageName)
-    sleep(1000)
-    if(text("结束运行"||"强行停止").exists()){
-        click("结束运行"||"强行停止");
-        sleep(1000);
-        if(textContains("确定").exists()){
-            !click("确定");
+    wait(() => textContains("结束运行"||"强行停止").exists(),10,500,{
+        then(){
+            log("结束运行");
+            click("结束运行"||"强行停止");
+            while(click("确定"));
             log("结束小米社区");
             sleep(500);
-        }
-    }else{
-        let end = className("android.widget.LinearLayout").desc("结束运行").findOne(2000)
-        if(end){
-            end.click()
-            sleep(1000)
-            if(textContains("确定").exists()){
-                click("确定")
-                log("结束小米社区");
-                sleep(500);
-            }
-        }
-    }
+        },
+        else(){
+            log("未找到结束运行按钮，退出");
+        },
+    });
     app.launch(packageName)
     log("打开小米社区");
 }
 
-
 //浏览帖子
-function posts(n){
+function posts(){
     log("开始浏览帖子")
-    var regex = /((0[0-9]|1[0-9]|2[0-3]):(0[0-9]|[1-5][0-9]))|(0[0-9]|1[0-9]|2[0-3])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])|(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/;
-    var textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(2000); 
-    let pkly = className("android.widget.ImageView").desc("评论").findOne(2000)
-    if (textView) { 
-        textView.click(); 
-    }
-    else if (pkly){
-        pkly.click();
-    }
-    else{
-        log("第"+n+"次重试")
-        swipe(dwidth*4/5,dheight*3/4,dwidth*2/5,dheight*1/4, 1500)
-        if(n > 3){
-            log("打开帖子失败")      
+    let page = className('ImageView').desc('编辑导航栏顺序').findOne(20000);
+    if(page){
+        var regex = /((0[0-9]|1[0-9]|2[0-3]):(0[0-9]|[1-5][0-9]))|(0[0-9]|1[0-9]|2[0-3])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])|(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/;
+        var textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(2000); 
+        let pkly = className("android.widget.ImageView").desc("评论").clickable(true).findOne(2000)
+        if (textView || pkly) { 
+            textView.click() || pkly.click();
+        }else{
+            log("页面错误")
             return;
         }
-        if(n <= 3){
-            return posts(n+1);
-        }
+        log("打开帖子");
+        sleep(13000);
+        log("浏览10s完成");
+        back();
+    }else{
+        log("未找到帖子页面")
+        return;
     }
-    log("打开帖子");
-    sleep(13000);
-    log("浏览10s完成");
-    back();
-    return
 }
 
 //寻找坐标
@@ -311,8 +304,6 @@ function swipeBezierzier(sx, sy, ex, ey){
     randomSwipe(sx,sy,ex,ey)
 }
 
-
-
 //拔萝卜活动
 function see(){
     swipe(500, 1500, 700, 500, 800)
@@ -450,11 +441,7 @@ function join(){
     if(qujiaru){
         qujiaru.click()
         let join = className("android.widget.Button").text("加入圈子").findOne(3000).click()
-        if(join){
-            log("加入圈子成功")
-        }else{
-            log("未找到加入按钮")
-        }
+        join ? log("加入圈子成功") : log("未找到加入按钮")
         sleep(2000)
         back()
     }else{
@@ -463,9 +450,9 @@ function join(){
 }
 
 function 活动1() {
-    let 参加 = className("android.widget.Button").text("去参加").findOne(5000)
-    if(参加){
-        参加.click()
+    let cj = className("android.widget.Button").text("去参加").findOne(5000)
+    if(cj){
+        cj.click()
         let register = className("android.widget.Button").text("立即报名").findOne(2000)
         if(register){
             sleep(1000)
@@ -494,8 +481,8 @@ function ganenji(){
         sleep(1000)
         解锁()
         sleep(1000)
-        back()
-        sleep(1000)
+    back()
+    sleep(1000)
     }else{
         log("未找到活动入口")
     }
@@ -533,72 +520,40 @@ function 解锁() {
     }
 }
 
-
-function 小程序签到(){
-    let tr = className("android.widget.ImageView").desc("第3屏")
-    for (let i = 0; i < 20; i++) {
-        home();
-        sleep(300)
-        if (tr.exists()) {
-            break;
-        }
-        if(i == 19){
-            log("未找到小程序入口")
-            return
-        }
+//小程序签到
+function 小程序签到() {
+    var qwx = className("android.widget.Button").text("去微信").findOne(5000);
+    if (qwx) {
+        qwx.click();
+    } else {
+        toastLog("未找到去微信按钮，请升级社区app版本");
+        return; 
     }
-    tr.click()
-    sleep(3000)
-    while(!(className("android.widget.ImageButton").desc("更多").clickable(true).exists())){
-        if(config.坐标点击){
-            click(config.x,config.y)
-            log("点击" + config.x + "," + config.y)
-            sleep(300)
-        }else{
-            className("android.widget.TextView").text("小米社区").desc('小米社区').findOne(5000).click()
-            log("点击小米社区")
-            sleep(1000)
-        }
-    }
-    log("进入小程序")
-    sleep(500)
-    let p = textContains('人浏览').findOne(10000)
-    if(p){
-        log("内容加载完成")
-    }
-    let edit = className('TextView').text('编辑资料').depth(24)
-    let cont = 0
-    while (true){
-        if(edit.exists()){
-            log("进入我的页面")
-            break
-        }else{
-            log("尚未进入我的页面")
-            let me = id("a0g").className("android.widget.TextView").text("我的").findOne(4000)
-            if(me) me.parent().parent().click()
-            sleep(1500)
-            cont ++
-            if(cont > 3){
-                log("未找到我的页面")
-                return
+    sleep(1000);
+    wait(() => text('编辑资料').exists(), 10, 1000,{
+        then:() => {
+            let signed = className("android.widget.TextView").text("已签到")
+            if(signed.exists()){
+                log("小程序已签到")
+            }else{
+                let qd = className("android.widget.TextView").text("去签到").findOne(15000)
+                if (qd) {
+                    while (!signed.exists()) {
+                        qd.click();
+                        sleep(500)
+                    }
+                }
+                log("完成小程序签到")
             }
+        },
+        else:() => {
+            console.log("未找到小程序页面");
         }
-    }
-    className("android.widget.TextView").text("每日签到").waitFor()
-    sleep(500)
-    let signed = className("android.widget.TextView").text("已签到")
-    if(signed.exists()){
-        log("小程序已签到")
-    }else{
-        let qd = className("android.widget.TextView").text("去签到").findOne(15000)
-        if (qd) {
-            while (!signed.exists()) {
-                qd.click();
-                sleep(200)
-            }
-        }
-    }
+    })
+    launchApp("小米社区")
 }
+
+
 //跳过广告
 function skipAd() {
     let adCloseBtn = className("android.widget.ImageView").desc("关闭").findOne(3000);
@@ -607,7 +562,6 @@ function skipAd() {
         log("跳过了广告");
     }
 }
-
 
 function clickcenter(obj){
     let x = obj.centerX()
@@ -640,7 +594,6 @@ function start(){
     }
     else{
         findCenter(); 
-        
     }
 }
 
@@ -656,19 +609,19 @@ function main() {
         sleep(500);
         unLock();
     }
-    device.keepScreenOn();
     let musicVolume = device.getMusicVolume();
     device.setMusicVolume(0);
-    if (config.小程序签到) 小程序签到();
     killAPP("com.xiaomi.vipaccount");
     skipAd(); 
-    if (config.浏览帖子) posts(1);
-    let sign = className("android.widget.ImageView").desc("签到").findOne(10000).click();
+    if (config.浏览帖子) posts();
+    let sign = className("android.widget.ImageView").desc("签到").findOne(10000);
     if (sign){
+        sign.click();
         log("打开签到页面");
         percentage = logpercentage();
         start();
         // 按配置启用功能
+        if (config.小程序签到) 小程序签到();
         if (config.双旗舰) 活动1();
         if (config.加入圈子) join();
         if (config.感恩季) ganenji();
