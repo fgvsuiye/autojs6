@@ -26,28 +26,33 @@ main();
 
 //解锁
 function unLock() {
+    js = config.解锁方式;
+    ran = random(-300,300)
     device.keepScreenOn(3600 * 1000);
     log("开始解锁设备");
     sleep(1000);
-    wait(() => {
-        ran = random(-300,300)
+    if (js == 1 || js == 2){
+        wait(() => {
+            swipe(dwidth*1/2, dheight*0.7+ran, dwidth*1/2, dheight*1/2+ran, 150)
+            sleep(1000)
+            return textContains("紧急呼叫").exists()
+            },10,200,{
+                then(){
+                    log("上滑成功")
+                },
+                else(){
+                    log("未找到解锁界面，签到退出")
+                    exit()
+                },
+        });
+    }else{
         swipe(dwidth*1/2, dheight*0.7+ran, dwidth*1/2, dheight*1/2+ran, 150)
-        sleep(1000)
-        return textContains("紧急呼叫").exists()
-        },10,200,{
-            then(){
-                log("上滑成功")
-            },
-            else(){
-                log("未找到解锁界面，签到退出")
-                exit()
-            },
-    });
+    }
     sleep(1000);
-    if (config.解锁方式 == 1) {
+    if (js == 1) {
         log("图案解锁");
         gesture(800, config.锁屏图案坐标);
-    } else if (config.解锁方式 == 2) {
+    } else if (js == 2) {
         log("数字密码解锁");
         for (let i = 0; i < config.锁屏数字密码.length; i++) {
             desc(config.锁屏数字密码[i]).findOne().click();
@@ -522,15 +527,43 @@ function 解锁() {
 
 //小程序签到
 function 小程序签到() {
-    var qwx = className("android.widget.Button").text("去微信").findOne(5000);
+    wait(() => {
+        home();
+        return desc("第3屏").exists()
+    }, 10, 1000);
+    log("进入第3屏页面");
+    wait(() => {
+        if (config.坐标点击) {
+            click(config.x, config.y);
+        } else {
+            var text1 = textContains("小米社区").findOne(3000);
+            var desc1 = desc("小米社区").findOne(3000);
+            if (text1 || desc1) {
+                text1.click() || desc1.click();
+            } else {
+                toastLog("未找到小米社区按钮");
+            }
+        }
+        return className("android.widget.TextView").textContains("动态").exists()
+    }, 10, 1000);
+    log("进入小程序页面");
+
+    /* var qwx = className("android.widget.Button").text("去微信").findOne(5000);
     if (qwx) {
         qwx.click();
     } else {
         toastLog("未找到去微信按钮，请升级社区app版本");
         return; 
-    }
+    } */
     sleep(1000);
-    wait(() => text('编辑资料').exists(), 10, 1000,{
+    wait(() =>{ 
+        let wd = id("a0g").className("android.widget.TextView").text("我的").findOne(500)
+        if(wd && !wd.click()){
+          click(dwidth * 0.75, dheight * 0.95)
+        }
+        sleep(1000)
+        return text('编辑资料').exists()
+    }, 10, 1000,{
         then:() => {
             let signed = className("android.widget.TextView").text("已签到")
             if(signed.exists()){
@@ -550,7 +583,7 @@ function 小程序签到() {
             console.log("未找到小程序页面");
         }
     })
-    launchApp("小米社区")
+    //launchApp("小米社区")
 }
 
 
@@ -611,6 +644,7 @@ function main() {
     }
     let musicVolume = device.getMusicVolume();
     device.setMusicVolume(0);
+    if (config.小程序签到) 小程序签到();
     killAPP("com.xiaomi.vipaccount");
     skipAd(); 
     if (config.浏览帖子) posts();
@@ -621,7 +655,7 @@ function main() {
         percentage = logpercentage();
         start();
         // 按配置启用功能
-        if (config.小程序签到) 小程序签到();
+        
         if (config.双旗舰) 活动1();
         if (config.加入圈子) join();
         if (config.感恩季) ganenji();
