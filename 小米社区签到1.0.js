@@ -395,7 +395,6 @@ function level() {
     if (button){ 
         button.click(); 
         sleep(1000)
-        button = className("android.widget.TextView").text("成长记录").findOne(1500); 
         var name1, value1;
         var sum = 0;
         today = date.replace(/-/g, "\/");
