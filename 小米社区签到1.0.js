@@ -12,7 +12,7 @@ var config = require("./config.js");
 
 run();//计时
 curTime = new Date();
-date = curTime.getFullYear() + "-" + (curTime.getMonth() + 1) + "-" + curTime.getDate();
+date = curTime.getFullYear() + "-" + (curTime.getMonth() + 1).toString().padStart(2, '0') + "-" + curTime.getDate();
 sleep(500);
 var centerX;
 var centerY;
@@ -29,7 +29,7 @@ function unLock() {
     js = config.解锁方式;
     ran = random(-300,300)
     device.keepScreenOn(3600 * 1000);
-    log("开始解锁设备");
+    log("★★★★★★解锁设备★★★★★★");
     sleep(1000);
     if (js == 1 || js == 2){
         wait(() => {
@@ -58,6 +58,7 @@ function unLock() {
             desc(config.锁屏数字密码[i]).findOne().click();
         }
     }
+    log("解锁成功");
 }
 //关闭程序
 function killAPP(packageName){
@@ -74,13 +75,11 @@ function killAPP(packageName){
             log("未找到结束运行按钮，退出");
         },
     });
-    app.launch(packageName)
-    log("打开小米社区");
 }
 
 //浏览帖子
 function posts(){
-    log("开始浏览帖子")
+    log("★★★★★★浏览帖子★★★★★★")
     let page = className('ImageView').desc('编辑导航栏顺序').findOne(20000);
     if(page){
         var regex = /((0[0-9]|1[0-9]|2[0-3]):(0[0-9]|[1-5][0-9]))|(0[0-9]|1[0-9]|2[0-3])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])|(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/;
@@ -105,7 +104,7 @@ function posts(){
 //寻找坐标
 function findCenter() {
     textContains("立即签到").findOne(5000).click();
-    log("开始签到");
+    log("★★★★★★开始签到★★★★★★");
     if (!images.requestScreenCapture()) {
         log('请求截图失败');
         exit();
@@ -311,6 +310,7 @@ function swipeBezierzier(sx, sy, ex, ey){
 
 //拔萝卜活动
 function see(){
+    log("★★★★★★萝卜活动★★★★★★");
     swipe(500, 1500, 700, 500, 800)
     var button = textContains("去看看").findOne(1500);
     if (button) {
@@ -390,20 +390,34 @@ function watchVideo(){
 
 //成长值
 function level() { 
+    log("★★★★★★今日明细★★★★★★");
     button = className("android.widget.TextView").text("社区成长等级").findOne(1500); 
     if (button){ 
         button.click(); 
         sleep(1000)
-        var a = readfile("/sdcard/pictures/level.txt"); 
+        button = className("android.widget.TextView").text("成长记录").findOne(1500); 
+        var name1, value1;
+        var sum = 0;
+        today = date.replace(/-/g, "\/");
+        let view = className("android.widget.TextView").text(today).find(2000);
+        if (view){
+            view.forEach(function(v){
+                name1 = v.previousSibling().text();
+                value1 = v.nextSibling().text();
+                log((name1+":").padEnd(20,' ')  + value1.padStart(5,' '));
+                sum += parseInt(value1);
+            });
+        }else{
+            log("没有找到");
+        }
+        log(("今日总计:").padEnd(20,' ')  + sum.padStart(5,' '));
+        //var a = readfile("/sdcard/pictures/level.txt"); 
         var num = className("android.widget.TextView").textContains("成长值").depth(13).indexInParent(1).findOne(3000)
         if (num) { 
             var num1 = num.text().split(" ")[1].split("/")[0]; 
             var numValue = parseInt(num1); 
-            var b = numValue - a; 
-            log("今日获得成长值：" + b); 
-            //notice("今日获得成长值：" + b); 
-            log("当前成长值：" + numValue); 
-            files.append("/sdcard/pictures/level.txt", "\n" + date + "：+" + b + "     签到+1的概率：" + percentage + "\n" + numValue); 
+            log(("当前成长值:").padEnd(20,' ')  + numValue.padStart(5,' '));
+            files.append("/sdcard/pictures/level.txt", "\n" + date + "：+" + sum + "\n" + "当前成长值：" + numValue); 
             sleep(500); 
         } else { 
             log("未找到成长值"); 
@@ -411,19 +425,6 @@ function level() {
     } else { 
         log("未找到'社区成长等级'按钮");
     } 
-} 
-
-//成长值文件
-function readfile(filePath) { 
-    if (!files.exists(filePath)) { 
-        files.createWithDirs(filePath); // 如果文件不存在则创建 
-        return 0; 
-    } 
-    var fileContent = files.read(filePath); 
-    if (!fileContent) return 0; // 如果文件无数据则返回0 
-    var lines = fileContent.split("\n"); 
-    var lastLine = lines[lines.length - 1];   
-    return parseInt(lastLine); 
 } 
 
 //签到+1概率
@@ -457,6 +458,7 @@ function join(){
 function 活动1() {
     let cj = className("android.widget.Button").text("去参加").findOne(5000)
     if(cj){
+        log("★★★★★★旗舰活动★★★★★★")
         cj.click()
         let register = className("android.widget.Button").text("立即报名").findOne(2000)
         if(register){
@@ -473,6 +475,7 @@ function 活动1() {
         }
         解锁()
         sleep(1000)
+        log("完成双旗舰活动")
         back()
     }else{
         log("未找到活动入口")
@@ -527,8 +530,10 @@ function 解锁() {
 
 //小程序签到
 function 小程序签到() {
+    log("★★★★★★程序签到★★★★★★");
     wait(() => {
         home();
+        sleep(1000)
         return desc("第3屏").exists()
     }, 10, 1000);
     log("进入第3屏页面");
@@ -536,17 +541,17 @@ function 小程序签到() {
         if (config.坐标点击) {
             click(config.x, config.y);
         } else {
-            var text1 = textContains("小米社区").findOne(3000);
-            var desc1 = desc("小米社区").findOne(3000);
-            if (text1 || desc1) {
-                text1.click() || desc1.click();
+            var text1 = packageName('com.miui.home').textContains("小米社区").findOne(1000);
+            if (text1 ) {
+                text1.click();
             } else {
-                toastLog("未找到小米社区按钮");
+                toastLog("正在寻找小程序入口");
             }
         }
-        return className("android.widget.TextView").textContains("动态").exists()
+        sleep(2000)
+        return className("android.widget.TextView").text("论坛").exists() && className("android.widget.TextView").text("我的").exists()
     }, 10, 1000);
-    log("进入小程序页面");
+    log("进入小程序");
 
     /* var qwx = className("android.widget.Button").text("去微信").findOne(5000);
     if (qwx) {
@@ -580,10 +585,9 @@ function 小程序签到() {
             }
         },
         else:() => {
-            console.log("未找到小程序页面");
+            console.log("未找到我的页面");
         }
     })
-    //launchApp("小米社区")
 }
 
 
@@ -646,13 +650,15 @@ function main() {
     device.setMusicVolume(0);
     if (config.小程序签到) 小程序签到();
     killAPP("com.xiaomi.vipaccount");
+    app.launchApp("小米社区");
+    log("打开小米社区");
     skipAd(); 
     if (config.浏览帖子) posts();
     let sign = className("android.widget.ImageView").desc("签到").findOne(10000);
     if (sign){
         sign.click();
         log("打开签到页面");
-        percentage = logpercentage();
+        //percentage = logpercentage();
         start();
         // 按配置启用功能
         
