@@ -9,7 +9,6 @@
 
 // 引入配置文件
 var config = require("./config.js");
-
 run();//计时
 curTime = new Date();
 date = curTime.getFullYear() + "-" + (curTime.getMonth() + 1).toString().padStart(2, '0') + "-" + curTime.getDate();
@@ -26,24 +25,24 @@ main();
 
 //解锁
 function unLock() {
+    log(">>>>>>>---|解锁设备|---<<<<<<<");
     js = config.解锁方式;
     ran = random(-300,300)
     device.keepScreenOn(3600 * 1000);
-    log("★★★★★★解锁设备★★★★★★");
     sleep(1000);
     if (js == 1 || js == 2){
         wait(() => {
             swipe(dwidth*1/2, dheight*0.7+ran, dwidth*1/2, dheight*1/2+ran, 150)
             sleep(1000)
             return textContains("紧急呼叫").exists()
-            },10,200,{
-                then(){
-                    log("上滑成功")
-                },
-                else(){
-                    log("未找到解锁界面，签到退出")
-                    exit()
-                },
+        },5,500,{
+            then(){
+                log("上滑成功")
+            },
+            else(){
+                log("未找到解锁界面，签到退出")
+                exit()
+            },
         });
     }else{
         swipe(dwidth*1/2, dheight*0.7+ran, dwidth*1/2, dheight*1/2+ran, 150)
@@ -60,12 +59,13 @@ function unLock() {
     }
     log("解锁成功");
 }
+
 //关闭程序
 function killAPP(packageName){
     app.openAppSetting(packageName)
     wait(() => textContains("结束运行"||"强行停止").exists(),10,500,{
         then(){
-            log("结束运行");
+            //log("结束运行");
             click("结束运行"||"强行停止");
             while(click("确定"));
             log("结束小米社区");
@@ -77,34 +77,58 @@ function killAPP(packageName){
     });
 }
 
+//重启应用
+function restart(){
+    killAPP("com.xiaomi.vipaccount");
+    sleep(500);
+    log("打开小米社区");
+    app.launchApp("小米社区");
+}
+
 //浏览帖子
 function posts(){
-    log("★★★★★★浏览帖子★★★★★★")
-    let page = className('ImageView').desc('编辑导航栏顺序').findOne(20000);
-    if(page){
-        var regex = /((0[0-9]|1[0-9]|2[0-3]):(0[0-9]|[1-5][0-9]))|(0[0-9]|1[0-9]|2[0-3])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])|(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/;
-        var textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(2000); 
-        let pkly = className("android.widget.ImageView").desc("评论").clickable(true).findOne(2000)
-        if (textView || pkly) { 
-            textView.click() || pkly.click();
-        }else{
-            log("页面错误")
-            return;
+    log(">>>>>>>---|浏览帖子|---<<<<<<<")
+    var regex = /((0[0-9]|1[0-9]|2[0-3]):(0[0-9]|[1-5][0-9]))|(0[0-9]|1[0-9]|2[0-3])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])|(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/;
+    var textView
+    wait(() => {
+        textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(8000); 
+        let page = className('ImageView').desc('编辑导航栏顺序').exists();
+        if (page && textView) {
+            log("找到帖子页面");
+            return true;
+        } else {
+            log("未找到帖子页面,尝试重启应用");
+            restart();
+            return false;
         }
-        log("打开帖子");
-        sleep(13000);
-        log("浏览10s完成");
-        back();
-    }else{
-        log("未找到帖子页面")
-        return;
-    }
+    }, 3, 1000, {
+        then(){
+            wait(() => {
+                log("尝试打开帖子");
+                textView.click();
+                return className("android.widget.TextView").text("收藏").findOne(5000);
+            }, 3, 1000, {
+                then(){
+                    log("打开帖子成功,开始浏览");
+                    sleep(13000);
+                    log("浏览完成");
+                    back();
+                },
+                else(){
+                    log("打开帖子失败");
+                }
+            });
+        },
+        else(){
+            log("未找到帖子页面，退出");
+        }
+    })
 }
 
 //寻找坐标
 function findCenter() {
     textContains("立即签到").findOne(5000).click();
-    log("★★★★★★开始签到★★★★★★");
+    log(">>>>>>>---|开始签到|---<<<<<<<");
     if (!images.requestScreenCapture()) {
         log('请求截图失败');
         exit();
@@ -310,7 +334,7 @@ function swipeBezierzier(sx, sy, ex, ey){
 
 //拔萝卜活动
 function see(){
-    log("★★★★★★萝卜活动★★★★★★");
+    log(">>>>>>>---|萝卜活动|---<<<<<<<");
     swipe(500, 1500, 700, 500, 800)
     var button = textContains("去看看").findOne(1500);
     if (button) {
@@ -390,7 +414,7 @@ function watchVideo(){
 
 //成长值
 function level() { 
-    log("★★★★★★今日明细★★★★★★");
+    log(">>>>>>>---|今日明细|---<<<<<<<");
     button = className("android.widget.TextView").text("社区成长等级").findOne(1500); 
     if (button){ 
         button.click(); 
@@ -410,12 +434,12 @@ function level() {
             log("没有找到");
         }
         log(("今日总计:").padEnd(20,' ')  + sum.padStart(5,' '));
-        //var a = readfile("/sdcard/pictures/level.txt"); 
         var num = className("android.widget.TextView").textContains("成长值").depth(13).indexInParent(1).findOne(3000)
         if (num) { 
             var num1 = num.text().split(" ")[1].split("/")[0]; 
             var numValue = parseInt(num1); 
             log(("当前成长值:").padEnd(20,' ')  + numValue.padStart(5,' '));
+            log("-".repeat(30));
             files.append("/sdcard/pictures/level.txt", "\n" + date + "：+" + sum + "\n" + "当前成长值：" + numValue); 
             sleep(500); 
         } else { 
@@ -457,7 +481,7 @@ function join(){
 function 活动1() {
     let cj = className("android.widget.Button").text("去参加").findOne(5000)
     if(cj){
-        log("★★★★★★旗舰活动★★★★★★")
+        log(">>>>>>>---|旗舰活动|---<<<<<<<")
         cj.click()
         let register = className("android.widget.Button").text("立即报名").findOne(2000)
         if(register){
@@ -529,7 +553,7 @@ function 解锁() {
 
 //小程序签到
 function 小程序签到() {
-    log("★★★★★★程序签到★★★★★★");
+    log(">>>>>>>---|程序签到|---<<<<<<<");
     wait(() => {
         home();
         sleep(1000)
@@ -623,7 +647,8 @@ function run() {
     })
 } 
 
-function start(){
+function sign(){
+    log(">>>>>>>---|开始签到|---<<<<<<<");
     var done = textContains("已签到").findOne(3000);
     if (done){        
         log("今日已签到");  
@@ -635,7 +660,6 @@ function start(){
 
 //主程序
 function main() {
-    
     if (!device.isScreenOn()) {
         log("设备已锁定");
         while (!device.isScreenOn()){            
@@ -645,38 +669,44 @@ function main() {
         sleep(500);
         unLock();
     }
-    let musicVolume = device.getMusicVolume();
-    device.setMusicVolume(0);
     if (config.小程序签到) 小程序签到();
-    killAPP("com.xiaomi.vipaccount");
-    app.launchApp("小米社区");
-    log("打开小米社区");
+    restart();
     skipAd(); 
     if (config.浏览帖子) posts();
-    let sign = className("android.widget.ImageView").desc("签到").findOne(10000);
-    if (sign){
-        sign.click();
-        log("打开签到页面");
-        //percentage = logpercentage();
-        start();
-        // 按配置启用功能
-        
-        if (config.双旗舰) 活动1();
-        if (config.加入圈子) join();
-        if (config.感恩季) ganenji();
-        if (config.拔萝卜) see(); 
-        if (config.成长值记录) level();
-        if (config.米粉节) fans();
-        if (config.观看视频) watchVideo();
-        killAPP("com.xiaomi.vipaccount");
-        home();
-        log("全部操作已完成");
-    }else{
-        toastLog("未找到签到按钮，即将退出")
-        sleep(1000)
-    }
-    device.setMusicVolume(musicVolume);
-    device.cancelKeepingAwake();
-    sleep(1000)
+    wait(() => {
+        let sign = className("android.widget.ImageView").desc("签到").findOne(10000);
+        if (sign) sign.click();
+        let xz = textContains("社区勋章").findOne(5000);
+        let dj = textContains("社区成长等级").findOne(5000);
+        if(xz && dj){
+            log("打开签到页面");
+            return true;
+        }else{
+            log("未找到签到页面");
+            log("尝试重启应用");
+            restart();
+            return false;
+        }
+    }, 2, 1000,{
+        then(){
+            log("已进入签到页面");
+            //percentage = logpercentage();
+            sign();
+            // 按配置启用功能
+            if (config.双旗舰) 活动1();
+            if (config.加入圈子) join();
+            if (config.感恩季) ganenji();
+            if (config.拔萝卜) see(); 
+            if (config.成长值记录) level();
+            if (config.米粉节) fans();
+            if (config.观看视频) watchVideo();
+            killAPP("com.xiaomi.vipaccount");
+            home();
+            log("全部操作已完成");
+        },
+        else(){
+            log("找不到签到页面，即将退出。");
+        }
+    });
     exit();
 }
