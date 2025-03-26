@@ -12,11 +12,10 @@ var config = require("./config.js");
 run();//计时
 curTime = new Date();
 date = curTime.getFullYear() + "-" + (curTime.getMonth() + 1).toString().padStart(2, '0') + "-" + curTime.getDate();
-sleep(500);
 var centerX;
 var centerY;
 var rX;
-var percentage;
+//var percentage;
 var dwidth = device.width;
 var dheight = device.height;
 log(`今天是：${date}`);
@@ -110,7 +109,7 @@ function posts(){
                 then(){
                     log("打开帖子成功,开始浏览");
                     sleep(13000);
-                    log("浏览完成");
+                    log("浏览10秒完成");
                     back();
                 },
                 else(){
@@ -347,9 +346,9 @@ function see(){
 
 //米粉节活动
 function fans() {
+    log(">>>>>>>---|米粉活动|---<<<<<<<")
     var button = className("android.widget.Button").text("去参与").findOne(1000);
     if (button) {
-        log(">>>>>>>---|米粉活动|---<<<<<<<")
         button.click();
         log("打开米粉节活动")
         var dianl = className("android.widget.Button").text("点亮今日足迹").findOne(1200);
@@ -382,9 +381,9 @@ function clickAndLog(button) {
 
 //观看视频
 function watchVideo(){ 
+    log(">>>>>>>---|视频任务|---<<<<<<<")  
     var watch = className("android.widget.Button").text("去浏览").findOne(1000); //查找'去浏览'按钮 
     if (watch) { 
-        log(">>>>>>>---|视频任务|---<<<<<<<")   
         var randomsleep = random(10000,15000);
         var stime = new Date().getTime(); //记录开始时间 
         var lastprinttime = -1;
@@ -466,9 +465,9 @@ function logpercentage(){
 }
 //加入圈子活动
 function join(){
+    log(">>>>>>>---|入圈活动|---<<<<<<<")
     let qujiaru = className("android.widget.Button").text("去加入").findOne(3000)
     if(qujiaru){
-        log(">>>>>>>---|入圈活动|---<<<<<<<")
         qujiaru.click()
         let join = className("android.widget.Button").text("加入圈子").findOne(3000).click()
         join ? log("加入圈子成功") : log("未找到加入按钮")
@@ -481,9 +480,9 @@ function join(){
 
 //双旗舰活动
 function 活动1() {
-    let cj = className("android.widget.Button").text("去参加").findOne(5000)
+    log(">>>>>>>---|旗舰活动|---<<<<<<<")
+    cj = className("android.widget.Button").text("去参加").findOne(5000)
     if(cj){
-        log(">>>>>>>---|旗舰活动|---<<<<<<<")
         cj.click()
         let register = className("android.widget.Button").text("立即报名").findOne(2000)
         if(register){
@@ -509,9 +508,9 @@ function 活动1() {
 
 //感恩季活动
 function ganenji(){
+    log(">>>>>>>---|感恩活动|---<<<<<<<")
     let qucanyu = className("android.widget.Button").text("去参与").findOne(3000).click();
     if(qucanyu){
-        log(">>>>>>>---|感恩活动|---<<<<<<<")
         sleep(1000)
         解锁()
         sleep(1000)
@@ -654,6 +653,23 @@ function sign(){
     }
 }
 
+//失败重试
+function signView(){
+    let sign = className("android.widget.ImageView").desc("签到").findOne(10000);
+    if (sign) sign.click();
+    let xz = textContains("社区勋章").findOne(5000);
+    let dj = textContains("社区成长等级").findOne(5000);
+    if(xz && dj){
+        log("当前为签到页面");
+        return true;
+    }else{
+        log("未找到签到页面");
+        log("尝试重启应用");
+        restart();
+        return false;
+    }
+}
+
 //主程序
 function main() {
     if (!device.isScreenOn()) {
@@ -669,24 +685,8 @@ function main() {
     restart();
     skipAd(); 
     if (config.浏览帖子) posts();
-    wait(() => {
-        let sign = className("android.widget.ImageView").desc("签到").findOne(10000);
-        if (sign) sign.click();
-        let xz = textContains("社区勋章").findOne(5000);
-        let dj = textContains("社区成长等级").findOne(5000);
-        if(xz && dj){
-            log("打开签到页面");
-            return true;
-        }else{
-            log("未找到签到页面");
-            log("尝试重启应用");
-            restart();
-            return false;
-        }
-    }, 3, 1000,{
+    wait(() => signView(), 3, 1000,{
         then(){
-            log("已进入签到页面");
-            //percentage = logpercentage();
             sign();
             // 按配置启用功能
             if (config.双旗舰) 活动1();
