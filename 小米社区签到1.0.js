@@ -28,13 +28,10 @@ function unLock() {
     log(">>>>>>>---|解锁设备|---<<<<<<<");
     js = config.解锁方式;
     ran = random(-300,300)
-    device.keepScreenOn(3600 * 1000);
-    sleep(1000);
     if (js == 1 || js == 2){
         wait(() => {
             swipe(dwidth*1/2, dheight*0.7+ran, dwidth*1/2, dheight*1/2+ran, 150)
-            sleep(1000)
-            return textContains("紧急呼叫").exists()
+            return textContains("紧急呼叫").findOne(2000)
         },5,500,{
             then(){
                 log("上滑成功")
@@ -63,9 +60,8 @@ function unLock() {
 //关闭程序
 function killAPP(packageName){
     app.openAppSetting(packageName)
-    wait(() => textContains("结束运行"||"强行停止").exists(),10,500,{
+    wait(() => textContains("结束运行"||"强行停止").findOne(3000),10,500,{
         then(){
-            //log("结束运行");
             click("结束运行"||"强行停止");
             while(click("确定"));
             log("结束小米社区");
@@ -83,6 +79,8 @@ function restart(){
     sleep(500);
     log("打开小米社区");
     app.launchApp("小米社区");
+    if (textContains("想要打开").findOne(1000)) click("允许");
+    sleep(1000);
 }
 
 //浏览帖子
@@ -93,6 +91,7 @@ function posts(){
     wait(() => {
         textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(8000); 
         let page = className('ImageView').desc('编辑导航栏顺序').exists();
+        sleep(1000);
         if (page && textView) {
             log("找到帖子页面");
             return true;
@@ -128,7 +127,6 @@ function posts(){
 //寻找坐标
 function findCenter() {
     textContains("立即签到").findOne(5000).click();
-    log(">>>>>>>---|开始签到|---<<<<<<<");
     if (!images.requestScreenCapture()) {
         log('请求截图失败');
         exit();
@@ -351,6 +349,7 @@ function see(){
 function fans() {
     var button = className("android.widget.Button").text("去参与").findOne(1000);
     if (button) {
+        log(">>>>>>>---|米粉活动|---<<<<<<<")
         button.click();
         log("打开米粉节活动")
         var dianl = className("android.widget.Button").text("点亮今日足迹").findOne(1200);
@@ -384,7 +383,8 @@ function clickAndLog(button) {
 //观看视频
 function watchVideo(){ 
     var watch = className("android.widget.Button").text("去浏览").findOne(1000); //查找'去浏览'按钮 
-    if (watch) {    
+    if (watch) { 
+        log(">>>>>>>---|视频任务|---<<<<<<<")   
         var randomsleep = random(10000,15000);
         var stime = new Date().getTime(); //记录开始时间 
         var lastprinttime = -1;
@@ -439,7 +439,7 @@ function level() {
             var num1 = num.text().split(" ")[1].split("/")[0]; 
             var numValue = parseInt(num1); 
             log(("当前成长值:").padEnd(20,' ')  + numValue.padStart(5,' '));
-            log("-".repeat(30));
+            log("-".repeat(29));
             files.append("/sdcard/pictures/level.txt", "\n" + date + "：+" + sum + "\n" + "当前成长值：" + numValue); 
             sleep(500); 
         } else { 
@@ -468,6 +468,7 @@ function logpercentage(){
 function join(){
     let qujiaru = className("android.widget.Button").text("去加入").findOne(3000)
     if(qujiaru){
+        log(">>>>>>>---|入圈活动|---<<<<<<<")
         qujiaru.click()
         let join = className("android.widget.Button").text("加入圈子").findOne(3000).click()
         join ? log("加入圈子成功") : log("未找到加入按钮")
@@ -478,6 +479,7 @@ function join(){
     }
 }
 
+//双旗舰活动
 function 活动1() {
     let cj = className("android.widget.Button").text("去参加").findOne(5000)
     if(cj){
@@ -509,6 +511,7 @@ function 活动1() {
 function ganenji(){
     let qucanyu = className("android.widget.Button").text("去参与").findOne(3000).click();
     if(qucanyu){
+        log(">>>>>>>---|感恩活动|---<<<<<<<")
         sleep(1000)
         解锁()
         sleep(1000)
@@ -556,24 +559,19 @@ function 小程序签到() {
     log(">>>>>>>---|程序签到|---<<<<<<<");
     wait(() => {
         home();
-        sleep(1000)
-        return desc("第3屏").exists()
-    }, 10, 1000);
+        return desc("第3屏").findOne(2000)
+    }, 5, 1000);
     log("进入第3屏页面");
+    sleep(1000);
     wait(() => {
         if (config.坐标点击) {
             click(config.x, config.y);
         } else {
             var text1 = packageName('com.miui.home').textContains("小米社区").findOne(1000);
-            if (text1 ) {
-                text1.click();
-            } else {
-                toastLog("正在寻找小程序入口");
-            }
+            text1 ? text1.click() : toastLog("正在寻找小程序入口");
         }
-        sleep(2000)
-        return className("android.widget.TextView").text("论坛").exists() && className("android.widget.TextView").text("我的").exists()
-    }, 10, 1000);
+        return className("android.widget.TextView").text("论坛").findOne(5000) && className("android.widget.TextView").text("我的").findOne(5000)
+    }, 5, 1000);
     log("进入小程序");
 
     /* var qwx = className("android.widget.Button").text("去微信").findOne(5000);
@@ -589,9 +587,8 @@ function 小程序签到() {
         if(wd && !wd.click()){
           click(dwidth * 0.75, dheight * 0.95)
         }
-        sleep(1000)
-        return text('编辑资料').exists()
-    }, 10, 1000,{
+        return text('编辑资料').findOne(2000)
+    }, 5, 1000,{
         then:() => {
             let signed = className("android.widget.TextView").text("已签到")
             if(signed.exists()){
@@ -639,8 +636,7 @@ function run() {
             let runtime = Math.floor((endtime - time) / 1000) 
             //log("运行时间：" + runtime + "秒"); 
             if ( runtime >= config.totaltime ){ 
-                log("定时结束"); 
-                device.cancelKeepingAwake(); 
+                log("脚本运行超时，即将退出"); 
                 exit(); 
             } 
         },10000,starttime) 
@@ -687,7 +683,7 @@ function main() {
             restart();
             return false;
         }
-    }, 2, 1000,{
+    }, 3, 1000,{
         then(){
             log("已进入签到页面");
             //percentage = logpercentage();
