@@ -60,7 +60,7 @@ function unLock() {
 function killAPP(packageName){
     wait(() => {
         app.openAppSetting(packageName)
-        return textContains("结束运行"||"强行停止").findOne(1000);
+        return textContains("结束运行"||"强行停止").findOne(2000);
     },2,500,{
         then(){
             click("结束运行"||"强行停止");
