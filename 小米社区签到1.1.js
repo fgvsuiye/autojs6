@@ -429,18 +429,18 @@ function level() {
             view.forEach(function(v){
                 name1 = v.previousSibling().text();
                 value1 = v.nextSibling().text();
-                log((name1+":").padEnd(20,' ')  + value1.padStart(5,' '));
+                log((name1+":").padEnd(20,' ')  + String(value1).padStart(5,' '));
                 sum += parseInt(value1);
             });
         }else{
             log("没有找到");
         }
-        log(("今日总计:").padEnd(20,' ')  + sum.padStart(5,' '));
+        log(("今日总计:").padEnd(20,' ')  + String(sum).padStart(5,' '));
         var num = className("android.widget.TextView").textContains("成长值").depth(13).indexInParent(1).findOne(3000)
         if (num) { 
             var num1 = num.text().split(" ")[1].split("/")[0]; 
             var numValue = parseInt(num1); 
-            log(("当前成长值:").padEnd(20,' ')  + numValue.padStart(5,' '));
+            log(("当前成长值:").padEnd(20,' ')  + String(numValue).padStart(5,' '));
             log("-".repeat(29));
             files.append("/sdcard/pictures/level.txt", "\n" + date + "：+" + sum + "\n" + "当前成长值：" + numValue); 
             sleep(500); 
