@@ -185,7 +185,7 @@ function qd() {
     }
     var width = image.getWidth();
     var height = image.getHeight();
-    for (let i = 1; i<height; i+=4){
+    for (let i = 1; i<height; i+=12){
         var s="";
         for (let j = 1; j<width; j+=2){
             var number = images.pixel(image, j, i);
