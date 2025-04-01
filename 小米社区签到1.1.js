@@ -691,7 +691,7 @@ function main() {
     wait(() => signView(), 3, 1000,{
         then(){
             //percentage = logpercentage();
-            sign();
+            //sign();
             // 按配置启用功能
             if (config.双旗舰) 活动1();
             if (config.加入圈子) join();
