@@ -424,7 +424,7 @@ function level() {
         var name1, value1;
         var sum = 0;
         today = date.replace(/-/g, "\/");
-        let view = className("android.widget.TextView").text(today).find(2000);
+        let view = className("android.widget.TextView").textContains(today).find(2000);
         if (view){
             view.forEach(function(v){
                 name1 = v.previousSibling().text();
