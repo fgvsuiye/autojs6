@@ -152,7 +152,7 @@ function newSign()  {
             log("分析结果")
             clickPic(res.body.json());
             break;
-        }else if (res.statusCode == 500) {
+        }else if (res.statusCode == 500 || res.statusCode == 400) {
             log("错误：");
             log(res.body.string());
         }else{
