@@ -28,9 +28,9 @@ var config = {
 
     // 截图配置
     x : 160,                // 截图左上角x坐标
-    y : 700,                // 截图左上角y坐标
+    y : 670,                // 截图左上角y坐标
     width : 760,           // 截图宽度
-    height : 880            // 截图高度
+    height : 860            // 截图高度
 };
 
 module.exports = config; // 导出配置
