@@ -128,7 +128,7 @@ function posts(){
 function upload() {
     log("开始截图");
     sleep(2000);
-    var pic = images.clip(captureScreen(), cXy(config.x), cYx(config.y), cXy(config.weigth), cYx(config.height));
+    var pic = images.clip(captureScreen(), cXy(config.x), cYx(config.y), cXy(config.width), cYx(config.height));
     images.save(pic, "/storage/emulated/0/脚本/pic.png", "png", 100);
     log("截图成功,上传图片");
     var res1 = http.postMultipart(config.url, {
