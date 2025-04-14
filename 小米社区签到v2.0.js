@@ -157,6 +157,7 @@ function newSign()  {
             log(res.body.string());
         }else{
             log("web服务器错误，请稍后再试");
+            log("错误码：" + res.statusCode);
         }
         textContains("请点击此处重试").findOne(1000).click();
     }
