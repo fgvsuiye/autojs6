@@ -166,8 +166,8 @@ function newSign()  {
 // 点击图标
 function clickPic(list) {
     for (let i = 0; i < list.length; i++) {
-        x = list[i][0] + cXy(130)
-        y = list[i][1] + cYx(675)
+        x = list[i][0] + cXy(config.x)
+        y = list[i][1] + cYx(config.y)
         let icon = list[i][2]
         log("点击第" + (i+1) + "个图标：" + icon)
         click(x, y)
