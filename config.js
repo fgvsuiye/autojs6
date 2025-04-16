@@ -25,7 +25,7 @@ var config = {
                 
     // 运行配置
     totaltime: 200,         //脚本运行时长限制(单位: 秒)
-    url : "http://34.96.137.121:5000/upload"
+    url : "http://up.kuandana.v6.rocks/upload"
 };
 
 module.exports = config; // 导出配置
