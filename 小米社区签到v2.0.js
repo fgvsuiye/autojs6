@@ -12,9 +12,7 @@ var config = require("./config.js");
 run();//计时
 curTime = new Date();
 date = curTime.getFullYear() + "-" + (curTime.getMonth() + 1).toString().padStart(2, '0') + "-" + curTime.getDate();
-
-setScaleBases(1080, 2400);
-//var percentage;
+var lx, ly;
 var dwidth = device.width;
 var dheight = device.height;
 log(`今天是：${date}`);
@@ -109,7 +107,7 @@ function posts(){
             wait(() => {
                 log("尝试打开帖子");
                 textView.click();
-                return className("android.widget.TextView").textContains("收藏").findOne(2000) || textContains("说说你的想法").exists();
+                return textContains("收藏").findOne(1000) || textContains("说说你的想法").exists();
             }, 3, 1000, {
                 then(){
                     log("打开帖子成功,开始浏览");
@@ -128,7 +126,21 @@ function posts(){
 function upload() {
     log("开始截图");
     sleep(2000);
-    var pic = images.clip(captureScreen(), cXy(config.x), cYx(config.y), cXy(config.width), cYx(config.height));
+    var l, r
+    try {
+        l = textContains("请在下图依次").findOne().parent().parent();
+        r = textContains("提交答案").findOne(2000)
+    }
+    catch (e) {
+        log("未找到截图位置，退出");
+        return {"statusCode": 500, "body": e};
+    }
+    sleep(1000)
+    lx = l.left()
+    ly = l.top()
+    let wid = r.right() - lx
+    let hei = r.top() - ly
+    var pic = images.clip(captureScreen(), lx, ly, wid, hei);
     images.save(pic, "/storage/emulated/0/脚本/pic.png", "png", 100);
     log("截图成功,上传图片");
     var res1 = http.postMultipart(config.url, {
@@ -152,24 +164,25 @@ function newSign()  {
             log("分析结果")
             clickPic(res.body.json());
             break;
-        }else if (res.statusCode == 500 || res.statusCode == 400) {
+        }else if (res.statusCode == 500) {
             log("错误：");
             log(res.body.string());
         }else{
             log("web服务器错误，请稍后再试");
             log("错误码：" + res.statusCode);
         }
-        textContains("请点击此处重试").findOne(1000).click();
+        textContains("刷新验证").findOne(1000).click();
     }
     
 }
 // 点击图标
 function clickPic(list) {
     for (let i = 0; i < list.length; i++) {
-        x = list[i][0] + cXy(config.x)
-        y = list[i][1] + cYx(config.y)
+        x = list[i][0] + lx
+        y = list[i][1] + ly
         let icon = list[i][2]
-        log("点击第" + (i+1) + "个图标：" + icon)
+        let confidence = list[i][3]
+        log("点击第" + (i+1) + "个图标：" + icon.padStart(5,"▒") + "。置信度：" + confidence)
         click(x, y)
         sleep(1000)
     }
@@ -277,18 +290,19 @@ function level() {
             view.forEach(function(v){
                 name1 = v.previousSibling().text();
                 value1 = v.nextSibling().text();
-                log((name1+":").padEnd(20,' ')  + String(value1).padStart(5,' '));
+                log((name1+":").padEnd(15,'▒')  + String(value1).padStart(5,' '));
                 sum += parseInt(value1);
             });
         }else{
             log("没有找到");
         }
-        log(("今日总计:").padEnd(20,' ')  + String(sum).padStart(5,' '));
+        sum = "+" + String(sum)
+        log(("今日总计:").padEnd(15,'▒')  + String(sum).padStart(5,' '));
         var num = className("android.widget.TextView").textContains("成长值").depth(13).indexInParent(1).findOne(3000)
         if (num) { 
             var num1 = num.text().split(" ")[1].split("/")[0]; 
             var numValue = parseInt(num1); 
-            log(("当前成长值:").padEnd(20,' ')  + String(numValue).padStart(5,' '));
+            log(("当前成长值:").padEnd(15,'▒')  + String(numValue).padStart(5,' '));
             log("-".repeat(29));
             files.append("/sdcard/pictures/level.txt", "\n" + date + "：+" + sum + "\n" + "当前成长值：" + numValue); 
             sleep(500); 
