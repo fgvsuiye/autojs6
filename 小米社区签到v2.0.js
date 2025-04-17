@@ -12,7 +12,6 @@ var config = require("./config.js");
 run();//计时
 curTime = new Date();
 date = curTime.getFullYear() + "-" + (curTime.getMonth() + 1).toString().padStart(2, '0') + "-" + curTime.getDate();
-var lx, ly;
 var dwidth = device.width;
 var dheight = device.height;
 log(`今天是：${date}`);
@@ -91,9 +90,8 @@ function posts(){
     var regex = /((0[0-9]|1[0-9]|2[0-3]):(0[0-9]|[1-5][0-9]))|(0[0-9]|1[0-9]|2[0-3])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])|(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/;
     var textView
     wait(() => {
-        textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(8000); 
+        textView = className("android.widget.TextView").depth("18").textMatches(regex).clickable(true).findOne(5000); 
         let page = className('ImageView').desc('编辑导航栏顺序').exists();
-        sleep(1000);
         if (page && textView) {
             log("找到帖子页面");
             return true;
@@ -123,36 +121,9 @@ function posts(){
     })
 }
 
-function upload() {
-    log("开始截图");
-    sleep(2000);
-    var l, r
-    try {
-        l = textContains("请在下图依次").findOne().parent().parent();
-        r = textContains("提交答案").findOne(2000)
-    }
-    catch (e) {
-        log("未找到截图位置，退出");
-        return {"statusCode": 500, "body": e};
-    }
-    sleep(1000)
-    lx = l.left()
-    ly = l.top()
-    let wid = r.right() - lx
-    let hei = r.top() - ly
-    var pic = images.clip(captureScreen(), lx, ly, wid, hei);
-    let pic_dir = "/storage/emulated/0/脚本/pic.png"
-    files.ensureDir(pic_dir)
-    images.save(pic, pic_dir, "png", 100);
-    log("截图成功,上传图片");
-    var res1 = http.postMultipart(config.url, {
-        file: ["0.jpg", "/storage/emulated/0/脚本/pic.png"]
-    });
-    log("上传图片成功,等待结果");
-    return res1
-}
 
 function newSign()  {
+    var l, r, lx, ly;
     if (!images.requestScreenCapture()) {
         toastLog("请求截图失败！");
         exit();
@@ -161,7 +132,7 @@ function newSign()  {
     sleep(1000);
     for (let i = 0; i < 2; i++) {
         log("开始第" + (i+1) + "次申请");
-        let res = upload();
+        let res = upload(i);
         if (res.statusCode == 200) {
             log("分析结果")
             clickPic(res.body.json());
@@ -175,24 +146,52 @@ function newSign()  {
         }
         textContains("刷新验证").findOne(1000).click();
     }
-    
-}
-// 点击图标
-function clickPic(list) {
-    for (let i = 0; i < list.length; i++) {
-        x = list[i][0] + lx
-        y = list[i][1] + ly
-        let icon = list[i][2]
-        let confidence = list[i][3]
-        log("点击第" + (i+1) + "个图标：" + icon.padStart(5,"▒") + "。置信度：" + confidence)
-        click(x, y)
+
+    function upload(i) {
+        log("开始截图");
+        sleep(2000);
+        try {
+            l = textContains("请在下图依次").findOne().parent().parent();
+            r = textContains("提交答案").findOne(2000)
+        }
+        catch (e) {
+            log("未找到截图位置，退出");
+            return {"statusCode": 500, "body": e};
+        }
         sleep(1000)
+        lx = l.left()
+        ly = l.top()
+        let wid = r.right() - lx
+        let hei = r.top() - ly
+        var pic = images.clip(captureScreen(), lx, ly, wid, hei);
+        let pic_dir = "/storage/emulated/0/脚本/pic.png";
+        files.ensureDir(pic_dir);
+        images.save(pic, pic_dir, "png", 100);
+        log("截图成功,上传图片");
+        var res1 = http.postMultipart(config.url[i], {
+            file: ["0.jpg", pic_dir]
+        });
+        log("上传图片成功,等待结果");
+        return res1
     }
-    log("图标点击完成")
-    click("提交答案")
-    sleep(1000)
-    if (textContains("已签到").findOne(3000)) log("签到成功")
+    
+    // 点击图标
+    function clickPic(list) {
+        list.forEach((item, index) => {
+            let [xOffset, yOffset, icon, confidence] = item; // 解构赋值
+            let x = xOffset + lx;
+            let y = yOffset + ly;
+            log(`点击第${index + 1}个图标：${icon.padStart(5, "▒")}。置信度：${confidence}`);
+            click(x, y);
+            sleep(1000);
+        });
+        log("图标点击完成")
+        click("提交答案")
+        sleep(1000)
+        if (textContains("已签到").findOne(3000)) log("签到成功")
+    }
 }
+
 
 
 //拔萝卜活动
@@ -292,19 +291,19 @@ function level() {
             view.forEach(function(v){
                 name1 = v.previousSibling().text();
                 value1 = v.nextSibling().text();
-                log((name1+":").padEnd(15,'▒')  + String(value1).padStart(5,' '));
+                log((name1+":").padEnd(17,'▒')  + String(value1).padStart(5,' '));
                 sum += parseInt(value1);
             });
         }else{
             log("没有找到");
         }
         sum = "+" + String(sum)
-        log(("今日总计:").padEnd(15,'▒')  + String(sum).padStart(5,' '));
+        log(("今日总计:").padEnd(17,'▒')  + String(sum).padStart(5,' '));
         var num = className("android.widget.TextView").textContains("成长值").depth(13).indexInParent(1).findOne(3000)
         if (num) { 
             var num1 = num.text().split(" ")[1].split("/")[0]; 
             var numValue = parseInt(num1); 
-            log(("当前成长值:").padEnd(15,'▒')  + String(numValue).padStart(5,' '));
+            log(("当前成长值:").padEnd(17,'▒')  + String(numValue).padStart(5,' '));
             log("-".repeat(29));
             files.append("/sdcard/pictures/level.txt", "\n" + date + "：+" + sum + "\n" + "当前成长值：" + numValue); 
             sleep(500); 
@@ -504,7 +503,6 @@ function run() {
         setInterval(function(time){ 
             endtime = new Date().getTime(); 
             let runtime = Math.floor((endtime - time) / 1000) 
-            //log("运行时间：" + runtime + "秒"); 
             if ( runtime >= config.totaltime ){ 
                 log("脚本运行超时，即将退出"); 
                 exit(); 
@@ -526,8 +524,8 @@ function sign(){
 
 //失败重试
 function signView(){
-    let sign = className("android.widget.ImageView").desc("签到").findOne(10000);
-    if (sign) sign.click();
+    let signBtn = className("android.widget.ImageView").desc("签到").findOne(10000);
+    if (signBtn) signBtn.click();
     let xz = textContains("社区勋章").findOne(5000);
     let dj = textContains("社区成长等级").findOne(5000);
     if(xz && dj){
@@ -543,6 +541,11 @@ function signView(){
 
 //主程序
 function main() {
+    let musicVolume = device.getMusicVolume();
+    device.setMusicVolume(0);
+    events.on("exit", function() {
+        device.setMusicVolume(musicVolume);
+    });
     if (!device.isScreenOn()) {
         log("设备已锁定");
         while (!device.isScreenOn()){            
@@ -565,9 +568,9 @@ function main() {
             if (config.小程序签到) 小程序签到();
             if (config.感恩季) ganenji();
             if (config.拔萝卜) see(); 
-            if (config.成长值记录) level();
             if (config.米粉节) fans();
             if (config.观看视频) watchVideo();
+            if (config.成长值记录) level();
             killAPP("com.xiaomi.vipaccount");
             home();
             log("全部操作已完成");
