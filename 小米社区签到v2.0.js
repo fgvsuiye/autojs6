@@ -141,7 +141,9 @@ function upload() {
     let wid = r.right() - lx
     let hei = r.top() - ly
     var pic = images.clip(captureScreen(), lx, ly, wid, hei);
-    images.save(pic, "/storage/emulated/0/脚本/pic.png", "png", 100);
+    let pic_dir = "/storage/emulated/0/脚本/pic.png"
+    files.ensureDir(pic_dir)
+    images.save(pic, pic_dir, "png", 100);
     log("截图成功,上传图片");
     var res1 = http.postMultipart(config.url, {
         file: ["0.jpg", "/storage/emulated/0/脚本/pic.png"]
