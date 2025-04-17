@@ -25,7 +25,10 @@ var config = {
                 
     // 运行配置
     totaltime: 200,         //脚本运行时长限制(单位: 秒)
-    url : "http://up.风中拾叶.top/upload""
+    url : [
+        "http://up.风中拾叶.top/upload",
+        "http://up.kuandana.v6.rocks/upload"
+    ]
 };
 
 module.exports = config; // 导出配置
