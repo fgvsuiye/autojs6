@@ -109,7 +109,9 @@ function posts(){
             }, 3, 1000, {
                 then(){
                     log("打开帖子成功,开始浏览");
-                    sleep(13000);
+                    sleep(5000);
+                    swipe(dwidth*0.5, dheight*0.8, dwidth*0.5, dheight*0.2, 500);
+                    sleep(6000);
                     log("浏览10秒完成");
                     back();
                 },
@@ -138,8 +140,7 @@ function newSign()  {
             clickPic(res.body.json());
             break;
         }else if (res.statusCode == 500) {
-            log("错误：");
-            log(res.body.json());
+            log("错误：" + res.body.json());
         }else{
             log("web服务器错误，请稍后再试");
             log("错误码：" + res.statusCode);
