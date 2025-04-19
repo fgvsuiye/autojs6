@@ -125,22 +125,24 @@ function posts(){
 
 
 function newSign()  {
-    var l, r, lx, ly;
+    var l, r, lx, ly, url
     if (!images.requestScreenCapture()) {
         toastLog("请求截图失败！");
         exit();
     }
     className("android.widget.TextView").text("立即签到").findOne().click();
     sleep(1000);
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 3; i++) {
         log("开始第" + (i+1) + "次申请");
+        if (!webTest()) return;
         let res = upload(i);
         if (res.statusCode == 200) {
             log("分析结果")
             clickPic(res.body.json());
             break;
         }else if (res.statusCode == 500) {
-            log("错误：" + res.body.json());
+            log("错误：");
+            log(res.body.json());
         }else{
             log("web服务器错误，请稍后再试");
             log("错误码：" + res.statusCode);
@@ -169,7 +171,7 @@ function newSign()  {
         files.ensureDir(pic_dir);
         images.save(pic, pic_dir, "png", 100);
         log("截图成功,上传图片");
-        var res1 = http.postMultipart(config.url[i], {
+        var res1 = http.postMultipart(url, {
             file: ["0.jpg", pic_dir]
         });
         log("上传图片成功,等待结果");
@@ -190,6 +192,26 @@ function newSign()  {
         click("提交答案")
         sleep(1000)
         if (textContains("已签到").findOne(3000)) log("签到成功")
+    }
+
+    function webTest() {
+        log("开始测试web服务器");
+        var available = false;
+        for (let j = 0; j < config.url.length; j++) {
+            url = config.url[j];
+            try {
+                let url_res = http.get(url);
+                if (url_res.statusCode == 200) {
+                    log("web服务器:"  + config.url[j] + "可用");
+                    available = true;
+                    break;
+                }
+            } catch (e) {
+                log("web服务器:"  + config.url[j] + " 连接失败");
+            }
+        }
+        if (!available) log("所有服务器都不可用，退出签到");
+        return available;
     }
 }
 
