@@ -139,7 +139,7 @@ function newSign()  {
             break;
         }else if (res.statusCode == 500) {
             log("错误：");
-            log(res.body.string());
+            log(res.body.json());
         }else{
             log("web服务器错误，请稍后再试");
             log("错误码：" + res.statusCode);
