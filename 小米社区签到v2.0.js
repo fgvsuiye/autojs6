@@ -130,19 +130,19 @@ function newSign()  {
         toastLog("请求截图失败！");
         exit();
     }
+    if (!webTest()) return;
     className("android.widget.TextView").text("立即签到").findOne().click();
     sleep(1000);
     for (let i = 0; i < 3; i++) {
         log("开始第" + (i+1) + "次申请");
-        if (!webTest()) return;
         let res = upload(i);
         if (res.statusCode == 200) {
             log("分析结果")
             clickPic(res.body.json());
             break;
         }else if (res.statusCode == 500) {
-            log("错误：");
-            log(res.body.json());
+            log("错误：" + res.body.json());
+            
         }else{
             log("web服务器错误，请稍后再试");
             log("错误码：" + res.statusCode);
@@ -171,6 +171,7 @@ function newSign()  {
         files.ensureDir(pic_dir);
         images.save(pic, pic_dir, "png", 100);
         log("截图成功,上传图片");
+        log("url：" + url)
         var res1 = http.postMultipart(url, {
             file: ["0.jpg", pic_dir]
         });
@@ -445,6 +446,7 @@ function 解锁() {
 //小程序签到
 function 小程序签到() {
     log(">>>>>>>---|程序签到|---<<<<<<<");
+
    /*  wait(() => {
         home();
         return desc("第3屏").findOne(2000)
@@ -470,15 +472,35 @@ function 小程序签到() {
         return; 
     }
     sleep(1000);
-    wait(() =>{ 
-        let wd = id("a0g").className("android.widget.TextView").text("我的").findOne(500)
-        if(wd && !wd.click()){
-          click(dwidth * 0.75, dheight * 0.95)
-        }
-        return text('编辑资料').findOne(2000)
-    }, 5, 1000,{
+    wait(() => textContains('编辑资料').findOne(1000), 5, 1000,{
         then:() => {
+            log("进入小程序");
             sleep(1000)
+            wait(() => {
+                let signed = className("android.widget.TextView").textContains("已签到")
+                if (signed.exists()) {
+                    return true
+                }else{
+                    let qd = className("android.widget.TextView").textContains("去签到").findOne(3000)
+                    if (qd) {
+                        log("点击去签到");
+                        qd.click();
+                    }else{
+                        log("未找到签到按钮")
+                    }
+                    sleep(1000)
+                }
+                return signed.exists()  
+            }, 5, 1000,
+            {
+                then:() => {
+                    log("小程序已签到")
+                },
+                else:() => {
+                    log("未找到签到按钮")
+                }
+            })
+            /* sleep(1000)
             let signed = className("android.widget.TextView").text("已签到")
             if(signed.exists()){
                 log("小程序已签到")
@@ -490,16 +512,20 @@ function 小程序签到() {
                         qd.click();
                         sleep(500)
                     }
+                }else{
+                    log("未找到签到按钮")
                 }
                 log("完成小程序签到")
             }
-            launchApp("小米社区");
-            sleep(1000)
+            sleep(1000) */
         },
         else:() => {
-            console.log("未找到我的页面");
+            console.log("未找到小程序页面");
         }
+        
     })
+    launchApp("小米社区");
+    sleep(1000);
 }
 
 
@@ -586,13 +612,13 @@ function main() {
             //percentage = logpercentage();
             sign();
             // 按配置启用功能
-            if (config.双旗舰) 活动1();
             if (config.加入圈子) join();
             if (config.小程序签到) 小程序签到();
-            if (config.感恩季) ganenji();
             if (config.拔萝卜) see(); 
             if (config.米粉节) fans();
             if (config.观看视频) watchVideo();
+            if (config.双旗舰) 活动1();
+            if (config.感恩季) ganenji();
             if (config.成长值记录) level();
             killAPP("com.xiaomi.vipaccount");
             home();
