@@ -46,8 +46,9 @@
 │   └── pic.png          # 验证码图片
 ├── yolov11/            
 │   ├── model/           # 模型文件目录
-│   |   ├── yzm.bin
-│   |   └── yzm.param
+│   │   ├── yzm.bin
+│   │   └── yzm.param
+│   ├── Yolo-Plugins.apk # Yolo插件
 │   └── yolov11.js       
 ├── main.js              # 主程序文件
 └── README.md            # 说明文档
