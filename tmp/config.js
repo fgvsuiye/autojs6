@@ -22,6 +22,8 @@ var config = {
     感恩季: 0,
     双旗舰: 1,
     拔萝卜: 1,
+    检查更新: 1,
+    更新间隔: 7, // 单位：天
 
     // 其他配置
     confThreshold : 0.7,                    // 最低置信度
@@ -33,6 +35,7 @@ var config = {
     shortTimeout : 2000,                    // 较短超时时间
     retryTimes : 3,                         // 主要操作的重试次数
     totaltime: 200                          //脚本运行时长限制(单位: 秒)
+
 };
 
 module.exports = config; // 导出配置

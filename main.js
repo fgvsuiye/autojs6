@@ -2,17 +2,23 @@
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶
- * 更新日期：2025-05-08
- * 版本：    v3.0
+ * 更新日期：2025-05-12
+ * 版本：    v3.1
  * 更新内容:
- *      1. 验证码识别本地化，不再依赖服务器。
- *      2. 大量优化代码逻辑。
- *      3. 修复部分bug并添加新的bug（bushi）。
+    > 1. `新增`检查更新功能。
+    > 2. `修复`验证码识别结果可能会返回错误结果。
+    > 3. `优化`浏览帖子页面识别。
+    > 4. `优化`小程序签到添加更多延迟以防加载缓慢。
 */
 
 var config = require("./tmp/config.js"); // 引入配置文件
 importClass(android.content.Context);
-
+importClass(android.app.NotificationManager);
+importClass(android.app.PendingIntent);
+importClass(android.content.Intent);
+importClass(android.net.Uri);
+importClass(androidx.core.app.NotificationCompat);
+importClass(android.os.Build);
 
 // --- 常量定义 ---
 const APP_PACKAGE_NAME = config.packageName;      // 小米社区包名
@@ -22,7 +28,9 @@ const LEVEL_RECORD_PATH = config.levelRecordPath; // 成长值记录路径
 const DEFAULT_TIMEOUT = config.defaultTimeout;    // 默认查找超时时间 (ms)
 const SHORT_TIMEOUT = config.shortTimeout;        // 较短超时时间
 const RETRY_TIMES = config.retryTimes;            // 主要操作的重试次数
-
+const CURRENT_SCRIPT_VERSION = 20250510;          // 当前脚本版本号
+const NOTIFICATION_CHANNEL_ID = "AutoJsUpdateChannel";// 通知渠道 ID
+const NOTIFICATION_CHANNEL_NAME = "脚本更新通知"; // 显示在系统设置中的渠道名称
 
 // --- 全局变量 ---
 var dwidth = device.width;
@@ -110,6 +118,24 @@ function safeClick(control, logMsg) {
         }
     }
     return false;
+}
+
+/**
+ * 点击控件的中心位置
+ * @param {UiObject} obj - UI 控件
+ */
+function clickCenter(obj) {
+    try {
+        if (obj instanceof UiObject === false) {
+            return;
+        }
+        let x = obj.bounds().centerX();
+        let y = obj.bounds().centerY();
+        console.log('点击中心坐标', x, y)
+        click(x, y);
+    } catch (e) {
+        console.error(`点击控件时出错: ${e}`);
+    }
 }
 
 /**
@@ -274,7 +300,7 @@ function ensureDeviceUnlocked(maxRetries = RETRY_TIMES) {
             // 可能原因：密码/图案错误、解锁界面未按预期消失、系统延迟等
             KeyCode(26)
             log("准备进行下一次重试...");
-            sleep(3000); // 重试前等待更长时间
+            sleep(SHORT_TIMEOUT); // 重试前等待
         }
     }
 
@@ -311,13 +337,10 @@ function killApp(packageName) {
         } else {
             log("未找到或无法点击结束按钮，可能应用未运行");
         }
-        sleep(500);
-        back(); // 返回上一级
-        sleep(500);
     } catch (e) {
         console.error(`结束应用 ${packageName} 时出错: ${e}`);
-        back(); // 尝试返回
     }
+    sleep(1000); // 等待结束动画
 }
 
 /**
@@ -326,11 +349,10 @@ function killApp(packageName) {
  */
 function restartApp(firstOpen = false) {
     killApp(APP_PACKAGE_NAME);
-    sleep(1000);
     log("启动小米社区应用");
     if (app.launch(APP_PACKAGE_NAME)) {
          // 等待应用启动加载完成，检查首页特征元素
-         waitFor(() => id("com.xiaomi.vipaccount:id/vp_main_page").exists() || text("我的").exists(), 2, SHORT_TIMEOUT, "应用首页加载");
+         waitFor(() => desc('签到').findOne(DEFAULT_TIMEOUT), 2, SHORT_TIMEOUT, "应用首页加载");
     } else {
         log("启动应用失败");
     }
@@ -352,18 +374,24 @@ function browsePosts() {
     try {
         if (waitFor(() => {
             let regex = /((0[0-9]|1[0-9]|2[0-3]):(0[0-9]|[1-5][0-9]))|(0[0-9]|1[0-9]|2[0-3])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])|(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/;
-            let postItem = className("android.widget.TextView").depth(18).textMatches(regex).clickable(true).findOne(DEFAULT_TIMEOUT); // 
-            let page = className('ImageView').desc('编辑导航栏顺序').exists();
-            if (page && postItem) {
-                log("找到帖子页面");
-                safeClick(postItem, "点击帖子");
-                return true;
-            } else {
-                log("未找到帖子页面,尝试重启应用");
-                restartApp(true);
-                return false;
+            var targetSelectors = [
+                textMatches(regex),
+                desc("评论"), 
+                id('img_tri_fst')
+            ];
+            for (let selector of targetSelectors) {
+                let target = selector.findOne(SHORT_TIMEOUT);
+                if (target) {
+                    log("找到帖子页面");
+                    target.clickable() ? safeClick(target, "点击帖子") : clickCenter(target); // 点击帖子
+                    return true;
+                }
+                swipe(dwidth * 0.5, dheight * 0.8, dwidth * 0.5, dheight * 0.5, random(400, 600)); 
             }
-        }, 3, 1000, "帖子详情页加载")) {
+            log("未找到帖子页面,尝试重启应用");
+            restartApp(true);
+            return false;
+        }, 2, 1000, "帖子详情页加载")) {
             log("打开帖子成功, 开始浏览");
             sleep(random(6000, 7000)); // 随机浏览时间
             swipe(dwidth * 0.5, dheight * 0.8, dwidth * 0.5, dheight * 0.2, random(400, 600)); // 向下滚动
@@ -816,7 +844,7 @@ function miniAppSign() {
                 }
                 return false;
             }
-        }, 1, SHORT_TIMEOUT, "微信小程序加载")) { // 等待时间加长
+        }, 2, SHORT_TIMEOUT, "微信小程序加载")) { // 等待时间加长
             log("进入微信小程序");
             sleep(1000);
             // 循环检查签到状态并尝试签到
@@ -866,7 +894,7 @@ function miniAppSign() {
  * 跳过启动广告
  */
 function skipAd() {
-    let closeButton = descMatches(/(关闭|跳过|Skip)/).findOne(SHORT_TIMEOUT) ||
+    let closeButton = descMatches(/(关闭|跳过|Skip)/).findOne(1000) ||
                       idMatches(/.*(close|skip|cancel).*/).findOne(1000); // 尝试匹配常见ID
 
     if (safeClick(closeButton, "跳过广告")) {
@@ -876,6 +904,175 @@ function skipAd() {
     }
 }
 
+/**
+ * 通过 Gitee 仓库中的配置文件检查脚本更新
+ */
+function checkScriptUpdate() {
+    threads.start(function() {
+        toastLog("正在检查脚本更新(配置文件)...");
+        var rawFileUrl = "https://gitee.com/kuandana/autojs6/raw/master/version.json";
+        // 添加时间戳参数防止缓存 (可选，但有时有用)
+        rawFileUrl += "?t=" + new Date().getTime();
+
+        //console.log("请求配置URL:", rawFileUrl);
+        try {
+            var response = http.get(rawFileUrl, {
+                // GitHub Raw 通常不需要特定 headers，但可以保留 Accept 以防万一
+                // headers: {'Accept': 'text/plain'} // 或 application/json
+            });
+
+            if (response.statusCode == 200) {
+                var configContent = response.body.string();
+                //console.log("获取到配置文件内容:", configContent.substring(0, 100) + "..."); // 打印部分内容
+
+                try {
+                    var config = JSON.parse(configContent);
+
+                    if (!config || !config.hasOwnProperty('latestVersion')) {
+                        console.error("检查更新：配置文件格式错误或缺少 'latestVersion' 字段。");
+                        toastLog("检查更新失败：配置文件无效");
+                        return;
+                    }
+
+                    var latestVersion = config.latestVersion;
+                    // 可选：获取更新链接和说明
+                    var updateUrl = config.updateUrl || `https://github.com/fgvsuiye/autojs6/`; // 默认仓库地址
+                    var releaseNotes = config.releaseNotes || "暂无更新说明。";
+
+                    console.log("当前版本:", CURRENT_SCRIPT_VERSION);
+                    console.log("最新版本:", latestVersion);
+
+                    // 直接比较版本号 
+                    if (isNewerCustomVersion(latestVersion, CURRENT_SCRIPT_VERSION)) {
+                        toastLog("发现新版本！");
+                        notifyUpdate(String(latestVersion), updateUrl, releaseNotes); // 统一转字符串给通知函数
+                    } else {
+                        console.log("当前已是最新版本。");
+                        updateDate.put('updateDate', today)
+                    }
+
+                } catch (parseError) {
+                    console.error("检查更新：解析配置文件 JSON 失败:", parseError);
+                    toastLog("检查更新失败：无法解析版本信息");
+                }
+
+            } else if (response.statusCode == 404) {
+                 console.warn(`检查更新：配置文件未找到 (404)。请确保路径正确: ${rawFileUrl}`);
+                 toastLog("检查更新失败：找不到版本文件");
+            } else if (response.statusCode == 403) {
+                 console.error("检查更新：访问被禁止 (403)。可能是私有仓库或权限问题。");
+                 toastLog("检查更新失败：无权访问版本文件");
+            } else {
+                console.error("检查更新失败：HTTP 状态码 " + response.statusCode);
+                console.error("响应内容:", response.body.string().slice(0, 200));
+            }
+        } catch (error) {
+            console.error("检查更新时发生网络或脚本异常:", error);
+            // toastLog("检查更新时出错");
+        }
+    });
+}
+
+/**
+ * 比较自定义版本号（适用于数字、日期YYYYMMDD等可直接比较的类型）
+ * @param {*} latestVersion - 从配置文件获取的新版本
+ * @param {*} currentVersion - 脚本内置的当前版本
+ * @returns {boolean} - 如果 latestVersion 比 currentVersion 新则返回 true
+ */
+function isNewerCustomVersion(latestVersion, currentVersion) {
+    // 简单比较，假设类型一致且可直接用 > 比较
+    // 注意：如果版本号是 "1.10.0" vs "1.9.0" 这种字符串，直接比较会出错 ('1.10.0' < '1.9.0')
+    // 但对于纯数字 (20231225 > 20231224) 或纯数字日期字符串 ('20231225' > '20231224') 是有效的
+    if (typeof latestVersion !== typeof currentVersion) {
+        console.warn("版本号比较：类型不一致！Latest:", typeof latestVersion, "Current:", typeof currentVersion, ". 尝试转换比较...");
+        // 尝试都转为字符串比较，或都转为数字比较（如果可能）
+        try {
+            return String(latestVersion) > String(currentVersion); // 或者 Number(latestVersion) > Number(currentVersion)
+        } catch (e) {
+            console.error("版本号比较失败:", e);
+            return false; // 无法比较则认为没有更新
+        }
+    }
+    // 类型相同时直接比较
+    return latestVersion > currentVersion;
+}
+
+/**
+ * 发送更新通知 (适配 Auto.js v4.1.1)
+ * @param {string} newVersion - 新版本号 (字符串形式)
+ * @param {string} url - 点击通知后跳转的 URL
+ * @param {string} notes - 更新日志
+ */
+function notifyUpdate(newVersion, url, notes) {
+    var notificationId = 1001; // 给这个通知一个唯一的 ID
+    var notificationTitle = "脚本更新提醒";
+    var notificationText = `发现新版本 ${newVersion}！点击查看详情。`;
+    var shortNotes = notes.split('\n')[0] || notes.substring(0, 50);
+    if (shortNotes && shortNotes.length < notes.length) {
+        shortNotes += "...";
+    }
+    var fullNotificationText = notificationText + "\n更新内容: " + shortNotes;
+
+    try {
+        // 1. 获取 NotificationManager 系统服务
+        var nm = context.getSystemService(context.NOTIFICATION_SERVICE);
+
+        // 2. (仅在 Android 8.0 及以上版本) 创建通知渠道
+        // 最好在脚本启动时创建一次，但放在这里也能确保它存在
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            var channel = new android.app.NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                NOTIFICATION_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_DEFAULT // 设置通知重要性级别
+            );
+            // channel.setDescription("接收脚本版本更新提醒"); // 可选的渠道描述
+            nm.createNotificationChannel(channel); // 创建渠道
+        }
+
+        // 3. 创建一个 Intent，用于在点击通知时打开 URL
+        // 使用 Android 原生 Intent
+        var intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        // 如果 app.intent 确实存在且能创建 VIEW Intent，也可以用：
+        // var intent = app.intent({ action: "VIEW", data: url });
+
+        // 4. 创建 PendingIntent，包装上面的 Intent
+        var pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { 
+             pendingIntentFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        var pendingIntent = PendingIntent.getActivity(context, 0, intent, pendingIntentFlags);
+
+
+        // 5. 使用 NotificationCompat.Builder 构建通知
+        var builder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+            // !!必须设置一个小图标!! 使用 Android 系统自带的图标
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            // 也可以尝试 Auto.js 的图标资源，但不保证路径固定不变
+            // .setSmallIcon(org.autojs.autojs.R.drawable.autojs_material) // 不建议，可能随版本变化
+            .setContentTitle(notificationTitle) // 设置通知标题
+            .setContentText(fullNotificationText) // 设置通知主文本
+            .setContentIntent(pendingIntent) // 设置点击通知时触发的 Intent
+            .setAutoCancel(true) // 设置点击通知后自动清除通知
+            .setDefaults(NotificationCompat.DEFAULT_ALL) // 使用系统默认的通知声音、震动等
+            // 如果需要显示更长的文本，可以使用 BigTextStyle
+            // .setStyle(new NotificationCompat.BigTextStyle().bigText(fullNotificationText + "\n\n" + notes));
+
+
+        // 6. 发送通知
+        nm.notify(notificationId, builder.build());
+
+    } catch (error) {
+        console.error("发送通知时出错:", error);
+        log("堆栈跟踪:", error.stack); // 打印更详细的错误堆栈
+        toastLog("发送通知失败，错误信息请查看日志。");
+        // 提供备选信息给用户
+        console.log("---- 更新信息 ----");
+        console.log("新版本: " + newVersion);
+        console.log("更新地址: " + url);
+        console.log("更新内容: " + notes.substring(0, 100) + "...");
+        console.log("---- 更新信息结束 ----");
+    }
+}
 
 // ========================
 // === 主程序逻辑 ===
@@ -895,6 +1092,21 @@ function main() {
         console.warn(">>>>>>>---| 脚本结束 |---<<<<<<<");
     });
 
+    // 检查更新
+    if (config.检查更新) {
+        console.info(">>>>>>>---| 检查更新 |---<<<<<<<");
+        let today = parseInt(todayDate.replace(/-/g, ''));
+        let updateDate = storages.create("updateDate");
+        let sto =updateDate.get('updateDate');
+        // 是否为首次存储
+        if(sto == null){
+            updateDate.put('updateDate', today)
+        }
+        // 是否大于更新间隔
+        if(today - sto > config.更新间隔){
+            checkScriptUpdate();
+        }
+    }
     try {
         // 1. 处理屏幕状态和解锁
         if (!ensureDeviceUnlocked(3)) { // 最多尝试3次
