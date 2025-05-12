@@ -65,7 +65,7 @@
 
 * ~~由于验证码识别为上传至个人服务器识别，所以可能会出现服务器繁忙或无响应导致识别错误~~
 * 部分手机需要打开 `后台弹出界面`  的权限，否则无法自动启动社区
-* **后期更新可在项目主页点击 ![Code](https://github.com/fgvsuiye/test/blob/master/Quicker_20250512_212249.png) 后点击`Download ZIP`下载最新版本，然后解压至原文件夹覆盖即可。**
+* **后期更新可在项目主页点击 ![Code](https://github.com/fgvsuiye/test/blob/master/Quicker_20250512_212249.png) 后点击[Download ZIP](https://github.com/fgvsuiye/autojs6/archive/refs/heads/main.zip)下载最新版本，然后解压至原文件夹覆盖即可。**
 
 
 ## **再次说明：**
