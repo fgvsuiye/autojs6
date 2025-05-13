@@ -2,15 +2,16 @@
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶
- * 更新日期：2025-05-12
+ * 更新日期：2025-05-13
  * 版本：    v3.1
  * 更新内容:
-    > 1. `新增`检查更新功能。
-    > 2. `修复`验证码识别结果可能会返回错误结果。
-    > 3. `优化`浏览帖子页面识别。
-    > 4. `优化`小程序签到添加更多延迟以防加载缓慢。
-    > 5. 本次更新文件（`main.js`、`config.js`、`yolov11.js`）
+    > 1. `新增`自动更新功能。
+    > 2. `修复`部分bug。
+    > 3. 本次更新文件（`updater.js`, `main.js`）
 */
+// 更新参数
+var updateList = ["updater.js","main.js"];        // 需要更新的文件列表
+const CURRENT_SCRIPT_VERSION = 20250513;          // 当前脚本版本号
 
 var config = require("./tmp/config.js"); // 引入配置文件
 importClass(android.content.Context);
@@ -29,7 +30,7 @@ const LEVEL_RECORD_PATH = config.levelRecordPath; // 成长值记录路径
 const DEFAULT_TIMEOUT = config.defaultTimeout;    // 默认查找超时时间 (ms)
 const SHORT_TIMEOUT = config.shortTimeout;        // 较短超时时间
 const RETRY_TIMES = config.retryTimes;            // 主要操作的重试次数
-const CURRENT_SCRIPT_VERSION = 20250510;          // 当前脚本版本号
+
 const NOTIFICATION_CHANNEL_ID = "AutoJsUpdateChannel";// 通知渠道 ID
 const NOTIFICATION_CHANNEL_NAME = "脚本更新通知"; // 显示在系统设置中的渠道名称
 
@@ -40,6 +41,9 @@ var todayDate = formatDate(new Date());
 var startTime = new Date().getTime(); // 用于脚本总超时计时
 var yoloProcessor = null; // 初始化为 null
 var lx, ly
+var needUpdate = false; // 是否需要更新
+var downloadList
+
 
 console.setSize(dwidth, dheight * 0.25)
 console.setPosition(0, 0)
@@ -808,7 +812,7 @@ function 解锁() {
                 tisheng.parent().child(6).click()
             }
             sleep(1000)
-            if(className("android.widget.TextView").text("可获得1次解锁机会").exists()){
+            if(className("android.widget.TextView").text("可获得1次解锁机会").exists() || i >= 10){
                 log("解锁次数不足")
                 break
             }
@@ -906,29 +910,52 @@ function skipAd() {
 }
 
 /**
- * 通过 Gitee 仓库中的配置文件检查脚本更新
+ * 链接可用测试
+ * @param {Array} urllist - 需要测试的链接列表
+ * @returns {string} 可用的链接，或 false
+ */
+function webTest(urllist) {
+    log("开始测试链接");
+    for (let j = 0; j < urllist.length; j++) {
+        url = urllist[j];
+        try {
+            let url_res = http.get(url);
+            if (url_res.statusCode == 200) {
+                log("链接:"  + urllist[j] + "可用");
+                return url
+            }
+        } catch (e) {
+            log("链接:"  + urllist[j] + " 连接失败");
+        }
+    }
+    return false;
+}
+
+/**
+ * 通过仓库中的配置文件检查脚本更新
  */
 function checkScriptUpdate() {
-    threads.start(function() {
         toastLog("正在检查脚本更新(配置文件)...");
-        var rawFileUrl = "https://gitee.com/kuandana/autojs6/raw/master/version.json";
-        // 添加时间戳参数防止缓存 (可选，但有时有用)
-        rawFileUrl += "?t=" + new Date().getTime();
-
+        var urlList = [
+            "https://gh-proxy.com/raw.githubusercontent.com/fgvsuiye/autojs6/refs/heads/main/version.json",
+            "https://gitee.com/kuandana/autojs6/raw/master/version.json"];
         //console.log("请求配置URL:", rawFileUrl);
+        var rawFileUrl = webTest(urlList);
+        if (!rawFileUrl) {
+            console.error("检查更新失败：无法连接到配置文件仓库。");
+            return;
+        }
         try {
             var response = http.get(rawFileUrl, {
                 // GitHub Raw 通常不需要特定 headers，但可以保留 Accept 以防万一
                 // headers: {'Accept': 'text/plain'} // 或 application/json
             });
-
             if (response.statusCode == 200) {
                 var configContent = response.body.string();
                 //console.log("获取到配置文件内容:", configContent.substring(0, 100) + "..."); // 打印部分内容
 
                 try {
                     var config = JSON.parse(configContent);
-
                     if (!config || !config.hasOwnProperty('latestVersion')) {
                         console.error("检查更新：配置文件格式错误或缺少 'latestVersion' 字段。");
                         toastLog("检查更新失败：配置文件无效");
@@ -939,14 +966,15 @@ function checkScriptUpdate() {
                     // 可选：获取更新链接和说明
                     var updateUrl = config.updateUrl || `https://github.com/fgvsuiye/autojs6/`; // 默认仓库地址
                     var releaseNotes = config.releaseNotes || "暂无更新说明。";
-
+                    downloadList = config.downloadList || {}; // 下载地址列表
                     console.log("当前版本:", CURRENT_SCRIPT_VERSION);
                     console.log("最新版本:", latestVersion);
 
                     // 直接比较版本号 
-                    if (isNewerCustomVersion(latestVersion, CURRENT_SCRIPT_VERSION)) {
-                        toastLog("发现新版本！");
-                        notifyUpdate(String(latestVersion), updateUrl, releaseNotes); // 统一转字符串给通知函数
+                    if (isNewerCustomVersion(latestVersion, CURRENT_SCRIPT_VERSION) ) {
+                        needUpdate = true;
+                        toastLog("发现新版本！,将在脚本结束后自动下载");
+                        //notifyUpdate(String(latestVersion), updateUrl, releaseNotes); // 统一转字符串给通知函数
                     } else {
                         console.log("当前已是最新版本。");
                         updateDate.put('updateDate', today)
@@ -971,7 +999,6 @@ function checkScriptUpdate() {
             console.error("检查更新时发生网络或脚本异常:", error);
             // toastLog("检查更新时出错");
         }
-    });
 }
 
 /**
@@ -996,6 +1023,74 @@ function isNewerCustomVersion(latestVersion, currentVersion) {
     }
     // 类型相同时直接比较
     return latestVersion > currentVersion;
+}
+
+/**
+ * 下载更新脚本
+ * @param {string} 下载的文件名
+ * @param {Array} 保存了下载文件的保存路径和链接的数组
+ */
+function updateScript(fileName, downloadinfo) {
+
+    var updateUrl = downloadinfo.url;
+    var ScriptPath = files.join(files.cwd(), downloadinfo.savePath);
+
+    console.log("开始下载 " + fileName);
+    //console.log("下载链接: " + updateUrl);
+    console.log("保存路径: " + ScriptPath);
+    // --- 下载更新文件 ---
+    toastLog("开始下载更新...");
+    try {
+        var response = http.get(updateUrl, {
+            timeout: 10000 // 毫秒
+        });
+
+        if (response.statusCode == 200) {
+            // 确保目录存在
+            files.ensureDir(ScriptPath);
+            // 如果目标文件已存在，先备份
+            let fullFileName = files.join(ScriptPath, fileName)
+            if (files.exists(fullFileName)) {
+                files.rename(fullFileName, fullFileName + ".bak");
+                log("已备份原文件: " + fullFileName + ".bak");
+            }
+            // 写入文件
+            files.writeBytes(ScriptPath, response.body.bytes());
+            log("新版本已下载到: " + ScriptPath);
+
+            // --- 验证下载文件 (简单示例：检查文件是否存在且非空) ---
+            if (files.exists(ScriptPath)) {
+
+                // --- 检查更新器脚本是否存在 ---
+                if (fileName == "main.js" && files.exists("/updater.js")) {
+                    let updaterScriptPath = files.join(files.cwd(), "updater.js");
+                    // --- 启动更新器脚本 ---
+                    engines.execScriptFile(updaterScriptPath);
+                    toastLog("准备更新main.js文件，主脚本即将退出...");
+                    // !!! 立即退出，以便 updater.js 可以操作 main.js 文件 !!!
+                    exit();
+                }
+            } else {
+                var errorMsg = "下载的文件无效 (不存在或为空): "
+                log(errorMsg);
+            }
+        } else {
+            var errorMsg = "下载失败: 服务器返回状态码 " + response.statusCode;
+            log(errorMsg);
+            try { log("服务器信息: " + response.body.string().slice(0,200)); } catch(e){}
+            toast(errorMsg);
+        }
+
+    } catch (error) {
+        var errorMsg = "下载或处理更新时发生错误: " + error;
+        log(errorMsg);
+        toast(errorMsg);
+        // 如果下载过程中出错，确保临时文件被删除 (如果已创建)
+        /* if (files.exists(ScriptPath)) {
+            files.remove(ScriptPath);
+        } */
+    }
+    log("主脚本正常结束 (未执行更新或更新失败)。");
 }
 
 /**
@@ -1158,6 +1253,19 @@ function main() {
         killApp(APP_PACKAGE_NAME);
         home();
         log("操作完成，已返回主页");
+        // 7. 脚本更新
+        sleep(1000); // 等待一秒，确保日志输出完整
+        if (needUpdate && updateList.length > 0){
+            console.info(">>>>>>>---| 更新脚本 |---<<<<<<<");
+            for (var key in downloadList) {
+               if (updateList.indexOf(key) >= 0) {
+                   updateScript(key, downloadList[key]);
+               }else {
+                   //console.log("跳过 " + key);
+               }
+            } 
+            console.log("所有脚本更新完成");
+        }
         exit() 
     }
 }

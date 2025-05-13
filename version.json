@@ -1,0 +1,23 @@
+{
+  "latestVersion": 20250513, 
+  "updateUrl": "https://github.com/fgvsuiye/autojs6", 
+  "releaseNotes": "1: 新增功能1 2: 新增功能2 3: 修复BUG1 4: 修复BUG2 5: 优化功能1 6: 优化功能2",
+  "downloadList": {
+    "config.js": {
+      "url": "https://gh-proxy.com/raw.githubusercontent.com/fgvsuiye/autojs6/refs/heads/main/tmp/config.js",
+      "savePath": "tmp/config.js.new"
+    },
+    "yolov11.js": {
+      "url": "https://gh-proxy.com/raw.githubusercontent.com/fgvsuiye/autojs6/refs/heads/main/yolov11/yolov11.js",
+      "savePath": "yolov11/yolov11.js"
+    },
+    "updater.js": {
+      "url": "https://gh-proxy.com/raw.githubusercontent.com/fgvsuiye/autojs6/refs/heads/main/updater.js",
+      "savePath": "updater.js"
+    },
+    "main.js": {
+      "url": "https://gh-proxy.com/raw.githubusercontent.com/fgvsuiye/autojs6/refs/heads/main/main.js",
+      "savePath": "main.js.new"
+    }
+  }
+}
