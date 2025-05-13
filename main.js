@@ -952,7 +952,7 @@ function checkScriptUpdate() {
             });
             if (response.statusCode == 200) {
                 var configContent = response.body.string();
-                //console.log("获取到配置文件内容:", configContent.substring(0, 100) + "..."); // 打印部分内容
+                console.log("获取到配置文件内容:", configContent.substring(0, 100) + "..."); // 打印部分内容
 
                 try {
                     var config = JSON.parse(configContent);
@@ -1196,10 +1196,12 @@ function main() {
         let sto =updateDate.get('updateDate');
         // 是否为首次存储
         if(sto == null){
+            console.log("首次存储");
             updateDate.put('updateDate', today)
         }
         // 是否大于更新间隔
         if(today - sto > config.更新间隔){
+
             checkScriptUpdate();
         }
     }
