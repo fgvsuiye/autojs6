@@ -937,7 +937,7 @@ function webTest(urllist) {
 function checkScriptUpdate() {
         toastLog("正在检查脚本更新(配置文件)...");
         var urlList = [
-            "https://gh-proxy.com/raw.githubusercontent.com/fgvsuiye/autojs6/refs/heads/main/version.json",
+            "https://github.moeyy.xyz/https://github.com/fgvsuiye/autojs6/blob/main/version.json",
             "https://gitee.com/kuandana/autojs6/raw/master/version.json"];
         //console.log("请求配置URL:", rawFileUrl);
         var rawFileUrl = webTest(urlList);
