@@ -43,6 +43,8 @@ var yoloProcessor = null; // 初始化为 null
 var lx, ly
 var needUpdate = false; // 是否需要更新
 var downloadList
+var updateDate = storages.create("updateDate");
+let today = parseInt(todayDate.replace(/-/g, ''));
 
 
 console.setSize(dwidth, dheight * 0.25)
@@ -1062,8 +1064,9 @@ function updateScript(fileName, downloadinfo) {
             if (files.exists(ScriptPath)) {
 
                 // --- 检查更新器脚本是否存在 ---
-                if (fileName == "main.js" && files.exists("/updater.js")) {
-                    let updaterScriptPath = files.join(files.cwd(), "updater.js");
+                var updaterScriptPath = files.cwd() + '/updater.js'
+                if (fileName == "main.js" && files.exists(updaterScriptPath)) {
+
                     // --- 启动更新器脚本 ---
                     engines.execScriptFile(updaterScriptPath);
                     toastLog("准备更新main.js文件，主脚本即将退出...");
@@ -1090,7 +1093,6 @@ function updateScript(fileName, downloadinfo) {
             files.remove(ScriptPath);
         } */
     }
-    log("主脚本正常结束 (未执行更新或更新失败)。");
 }
 
 /**
@@ -1191,8 +1193,6 @@ function main() {
     // 检查更新
     if (config.检查更新) {
         console.info(">>>>>>>---| 检查更新 |---<<<<<<<");
-        let today = parseInt(todayDate.replace(/-/g, ''));
-        let updateDate = storages.create("updateDate");
         let sto =updateDate.get('updateDate');
         // 是否为首次存储
         if(sto == null){
