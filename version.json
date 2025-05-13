@@ -2,7 +2,7 @@
 {
   "latestVersion": 20250513, 
   "updateUrl": "https://github.com/fgvsuiye/autojs6", 
-  "releaseNotes": "1: 新增功能1 2: 新增功能2 3: 修复BUG1 4: 修复BUG2 5: 优化功能1 6: 优化功能2",
+  "releaseNotes": "1. `新增`自动更新功能。2. `修复`部分bug。3. 本次更新文件（`main.js`）",
   "downloadList": {
     "config.js": {
       "url": "https://gh-proxy.com/raw.githubusercontent.com/fgvsuiye/autojs6/refs/heads/main/tmp/config.js",
