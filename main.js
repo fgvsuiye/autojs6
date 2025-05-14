@@ -207,7 +207,7 @@ function attemptSingleUnlock() {
         if (waitFor(() => {
             swipe(dwidth / 2, dheight * 0.7 + randomOffsetY, dwidth / 2, dheight * 0.3 + randomOffsetY, 200); // 上滑
             sleep(500); // 等待滑动动画
-            return textMatches(/(紧急呼叫|Emergency call)/).exists(); // 检查解锁界面标志
+            return textMatches(/.*?(紧急呼叫|Emergency call|图案|数字|混合|Pattern|PIN|Password).*?/).exists(); // 检查解锁界面标志
         }, 5, 1000, "上滑进入解锁界面")){
             unlockInterfaceVisible = true;
             break; // 成功找到解锁界面，退出循环
@@ -330,18 +330,18 @@ function killApp(packageName) {
         app.openAppSetting(packageName);
         sleep(1500); // 等待设置页面加载
         // 查找“结束运行”或“强制停止”按钮
-        let stopButton = textMatches(/(结束运行|强行停止|FORCE STOP)/).findOne(DEFAULT_TIMEOUT);
+        let stopButton = textMatches(/(结束运行|强行停止|FORCE STOP|Force stop)/).findOne(DEFAULT_TIMEOUT);
         if (stopButton && stopButton.enabled()) {
-            if (click("结束运行"||"强行停止")) {
-                // 查找并点击确认对话框的 "确定" 按钮
-                if (textContains("确定").findOne(SHORT_TIMEOUT)) {
-                    click("确定");
+            if (click(stopButton)) {
+                let ensureButton = textMatches(/(确定|OK)/).findOne(SHORT_TIMEOUT);
+                if (ensureButton) {
+                    click(ensureButton);
                     log("结束小米社区");
-                }else{
+                } else {
                     log("程序未运行");
                 }
             } else {
-                 log("无法点击 '结束运行/强行停止' 按钮");
+                log("无法点击 '结束运行/强行停止' 按钮");
             }
         } else {
             log("未找到或无法点击结束按钮，可能应用未运行");
