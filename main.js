@@ -40,8 +40,8 @@ var todayDate = formatDate(new Date());
 var startTime = new Date().getTime(); // 用于脚本总超时计时
 var yoloProcessor = null; // 初始化为 null
 var lx, ly
-var needUpdate = false; // 是否需要更新
 var downloadList, updateList; // 下载列表和更新日期
+var needsUpdate = false; // 是否需要更新
 var updateDate = storages.create("updateDate");
 var today = parseInt(todayDate.replace(/-/g, ''));
 var proxy
