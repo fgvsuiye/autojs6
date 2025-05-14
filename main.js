@@ -2,12 +2,13 @@
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶
- * 更新日期：2025-05-13
+ * 更新日期：2025-05-14
  * 版本：    v3.1
  * 更新内容:
-    > 1. `新增`自动更新功能。
-    > 2. `修复`部分bug。
-    > 3. 本次更新文件（`updater.js`, `main.js`）
+    > 1. `修复` 自动更新文件列表由云端获取。
+    > 2. `修复` 社区控件信息更新导致的验证码截图及签到失败。
+    > 3. `优化` 旗舰活动解锁判断。
+    
 */
 // 更新参数
 const CURRENT_SCRIPT_VERSION = 20250514;          // 当前脚本版本号
@@ -53,6 +54,7 @@ console.warn(">>>>>>>---| 脚本启动 |---<<<<<<<");
 console.log(`今天是：${todayDate}`);
 console.log(`设备分辨率：${dwidth}x${dheight}`);
 setScaleBases(1080, 2400); // 设置缩放基准
+device.keepScreenOn(180 * 1000); // 保持屏幕常亮
 // --- 初始化 ---
 try {
     // 加载 YOLO 模块
@@ -482,7 +484,7 @@ function captureVerificationCodeImage() {
     try {
         // 定位验证码区域的边界元素
         let topBoundaryParent = textContains("请在下图依次").findOne(DEFAULT_TIMEOUT)?.parent()?.parent();
-        let bottomBoundary = text("提交答案").findOne(DEFAULT_TIMEOUT);
+        let bottomBoundary = text("确认").findOne(DEFAULT_TIMEOUT);
         if (topBoundaryParent && bottomBoundary) {
             let bounds = topBoundaryParent.bounds();
             let bottomBounds = bottomBoundary.bounds();
@@ -538,7 +540,7 @@ function clickDetectedItems(list) {
         }
         sleep(random(500, 800)); // 模拟点击间隔 
     });
-    click("提交答案"); // 点击提交按钮
+    click("确认"); // 点击提交按钮
     log("图标点击完成");
 }
 
@@ -805,15 +807,12 @@ function 解锁() {
             safeClick(control, "点击解锁");
             log("第" + (i+1) + "次解锁");
             sleep(1000)
-            let xuanyao = className("android.widget.Button").text("炫耀一下").findOne(1000);
-            let tisheng = className("android.widget.TextView").text("等待解锁").depth(15).findOne(1000)
-            if(xuanyao){
-                xuanyao.parent().child(5).click()
-            }else if(tisheng){
-                tisheng.parent().child(6).click()
+            let closeButton = indexInParent(1).childCount(1).depth(16).find()
+            if(closeButton.length == 1){
+                safeClick(closeButton.get(0), "关闭解锁提示");
             }
             sleep(1000)
-            if(className("android.widget.TextView").text("可获得1次解锁机会").exists() || i >= 10){
+            if(text("可获得1次解锁机会").exists() || i >= 10 || text("等待解锁").exists()){
                 log("解锁次数不足")
                 break
             }
@@ -1185,6 +1184,7 @@ function main() {
     events.on("exit", function() {
         console.hide(); // 隐藏控制台
         device.setMusicVolume(initialMusicVolume);
+        device.cancelKeepingAwake();
         log(`设备音量已恢复到 ${initialMusicVolume}`);
         log(`脚本运行总耗时: ${((new Date().getTime() - startTime) / 1000).toFixed(2)} 秒`);
         console.warn(">>>>>>>---| 脚本结束 |---<<<<<<<");
@@ -1201,8 +1201,9 @@ function main() {
         }
         // 是否大于更新间隔
         if(today - sto > config.更新间隔){
-
             checkScriptUpdate();
+        }else{
+            console.log("距离上次更新时间小于更新间隔，跳过更新检查");
         }
     }
     try {
