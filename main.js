@@ -1,17 +1,16 @@
-/*
+/**
+ * @version 20250514
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶
  * 更新日期：2025-05-14
- * 版本：    v3.3
  * 更新内容:
     > 1. `修复` 自动更新文件列表由云端获取。
     > 2. `修复` 社区控件信息更新导致的验证码截图及签到失败。
     > 3. `优化` 旗舰活动解锁判断。
     
 */
-// 更新参数
-const CURRENT_SCRIPT_VERSION = 20250514;          // 当前脚本版本号
+
 
 var config = require("./tmp/config.js"); // 引入配置文件
 importClass(android.content.Context);
@@ -44,7 +43,9 @@ var lx, ly
 var needUpdate = false; // 是否需要更新
 var downloadList, updateList; // 下载列表和更新日期
 var updateDate = storages.create("updateDate");
-let today = parseInt(todayDate.replace(/-/g, ''));
+var today = parseInt(todayDate.replace(/-/g, ''));
+var proxy
+
 
 
 console.setSize(dwidth, dheight * 0.25)
@@ -909,6 +910,27 @@ function skipAd() {
     }
 }
 
+function setProxys() {
+    github = "https://github.com/fgvsuiye/autojs6/blob/main/version.json"
+    proxys = [
+        "https://github.moeyy.xyz/", 
+        "https://gh-proxy.com/", 
+        "https://gh.llkk.cc/",
+        "https://git.886.be/",
+        "https://ghfast.top/",
+        "https://gh-proxy.ygxz.in/",
+        "https://github.fxxk.dedyn.io/",
+    ];
+    for (let i = 0; i < proxys.length; i++) {
+        url = proxys[i] + github
+        if(webTest([url])){
+            proxy = proxys[i]
+            log("使用代理: " + proxy)
+            break;
+        }
+    }
+}
+
 /**
  * 链接可用测试
  * @param {Array} urllist - 需要测试的链接列表
@@ -919,7 +941,9 @@ function webTest(urllist) {
     for (let j = 0; j < urllist.length; j++) {
         url = urllist[j];
         try {
-            let url_res = http.get(url);
+            let url_res = http.get(url, {
+                timeout: 2000,
+            });
             if (url_res.statusCode == 200) {
                 log("链接:"  + j + "可用");
                 return url
@@ -931,167 +955,119 @@ function webTest(urllist) {
     return false;
 }
 
+
+
 /**
- * 通过仓库中的配置文件检查脚本更新
+ * 获取本地文件的版本号
+ * @param {string} relativePath相对于项目根目录的文件路径
+ * @returns {string | number} 版本号, 格式为 yyyymmdd 或 0 
  */
-function checkScriptUpdate() {
-        toastLog("正在检查脚本更新(配置文件)...");
-        var urlList = [
-            "https://github.moeyy.xyz/https://github.com/fgvsuiye/autojs6/blob/main/version.json",
-            "https://gitee.com/kuandana/autojs6/raw/master/version.json"];
-        //console.log("请求配置URL:", rawFileUrl);
-        var rawFileUrl = webTest(urlList);
-        if (!rawFileUrl) {
-            console.error("检查更新失败：无法连接到配置文件仓库。");
-            return;
+function getLocalVersion(relativePath) {
+    let localPath = files.join(files.cwd(), relativePath);
+    if (!files.exists(localPath)) {
+        return 0; // 文件不存在，视为版本0
+    }
+    try {
+        let content = files.read(localPath);
+        let match = content.match(/\*\s*@version\s+(\d{8})/);
+        return match ? match[1] : 0; // 无版本号视为0
+    } catch (e) {
+        console.error("读取本地文件版本失败: " + relativePath, e);
+        return 0;
+    }
+}
+
+/**
+ * 比较版本号
+ * @param {string|number} localVersion - 本地版本号
+ * @param {string|number} serverVersion - 服务器版本号
+ * @returns {boolean} 是否有更新
+ */
+function compareVersions(localVersion, serverVersion) {
+    var normalizeVersion = (vStr) => {
+        // 检查是否是8位数字字符串
+        if (typeof vStr === 'number') return vStr;
+        if (typeof vStr === 'string' && /^\d{8}$/.test(vStr)) {
+            return parseInt(vStr, 10);
         }
+        return 0;
+    };
+    var numLocal = normalizeVersion(localVersion);
+    var numServer = normalizeVersion(serverVersion);
+    if (numLocal < numServer) return true;
+}
+/**
+ * 检查并下载 updater.js
+ */
+function checkUpdater(lpcalVer, remoteVer) {
+    let url = proxy + "https://github.com/fgvsuiye/autojs6/blob/main/updater.js"
+    if (compareVersions(lpcalVer, remoteVer)) {
+        console.log("发现新版本: " + remoteVer + " (本地 " + lpcalVer + ")");
+        console.log("开始下载更新...");
         try {
-            var response = http.get(rawFileUrl, {
-                // GitHub Raw 通常不需要特定 headers，但可以保留 Accept 以防万一
-                // headers: {'Accept': 'text/plain'} // 或 application/json
+            let response = http.get(url, {
             });
             if (response.statusCode == 200) {
-                var configContent = response.body.string();
-                //console.log("获取到配置文件内容:", configContent.substring(0, 100) + "..."); // 打印部分内容
-
-                try {
-                    var config = JSON.parse(configContent);
-                    if (!config || !config.hasOwnProperty('latestVersion')) {
-                        console.error("检查更新：配置文件格式错误或缺少 'latestVersion' 字段。");
-                        toastLog("检查更新失败：配置文件无效");
-                        return;
-                    }
-
-                    var latestVersion = config.latestVersion;
-                    // 可选：获取更新链接和说明
-                    var updateUrl = config.updateUrl || `https://github.com/fgvsuiye/autojs6/`; // 默认仓库地址
-                    var releaseNotes = config.releaseNotes || "暂无更新说明。";
-                    downloadList = config.downloadList || {}; // 下载地址列表
-                    console.log("当前版本:", CURRENT_SCRIPT_VERSION);
-                    console.log("最新版本:", latestVersion);
-
-                    // 直接比较版本号 
-                    if (isNewerCustomVersion(latestVersion, CURRENT_SCRIPT_VERSION) ) {
-                        needUpdate = true;
-                        toastLog("发现新版本！,将在脚本结束后自动下载");
-                        updateList = config.updateList; // 下载地址列表
-                        toastLog("本次更新文件：" + updateList);
-                        //notifyUpdate(String(latestVersion), updateUrl, releaseNotes); // 统一转字符串给通知函数
-                    } else {
-                        console.log("当前已是最新版本。");
-                        updateDate.put('updateDate', today)
-                    }
-
-                } catch (parseError) {
-                    console.error("检查更新：解析配置文件 JSON 失败:", parseError);
-                    toastLog("检查更新失败：无法解析版本信息");
-                }
-
-            } else if (response.statusCode == 404) {
-                 console.warn(`检查更新：配置文件未找到 (404)。请确保路径正确: ${rawFileUrl}`);
-                 toastLog("检查更新失败：找不到版本文件");
-            } else if (response.statusCode == 403) {
-                 console.error("检查更新：访问被禁止 (403)。可能是私有仓库或权限问题。");
-                 toastLog("检查更新失败：无权访问版本文件");
+                let content = response.body.string();
+                console.log("下载成功，开始写入本地文件...");
+                files.write(files.join(files.cwd(), "updater.js"), content);
             } else {
-                console.error("检查更新失败：HTTP 状态码 " + response.statusCode);
-                console.error("响应内容:", response.body.string().slice(0, 200));
+                console.error("下载失败: HTTP " + response.statusCode);
             }
-        } catch (error) {
-            console.error("检查更新时发生网络或脚本异常:", error);
-            // toastLog("检查更新时出错");
-        }
-}
-
-/**
- * 比较自定义版本号（适用于数字、日期YYYYMMDD等可直接比较的类型）
- * @param {*} latestVersion - 从配置文件获取的新版本
- * @param {*} currentVersion - 脚本内置的当前版本
- * @returns {boolean} - 如果 latestVersion 比 currentVersion 新则返回 true
- */
-function isNewerCustomVersion(latestVersion, currentVersion) {
-    // 简单比较，假设类型一致且可直接用 > 比较
-    // 注意：如果版本号是 "1.10.0" vs "1.9.0" 这种字符串，直接比较会出错 ('1.10.0' < '1.9.0')
-    // 但对于纯数字 (20231225 > 20231224) 或纯数字日期字符串 ('20231225' > '20231224') 是有效的
-    if (typeof latestVersion !== typeof currentVersion) {
-        console.warn("版本号比较：类型不一致！Latest:", typeof latestVersion, "Current:", typeof currentVersion, ". 尝试转换比较...");
-        // 尝试都转为字符串比较，或都转为数字比较（如果可能）
-        try {
-            return String(latestVersion) > String(currentVersion); // 或者 Number(latestVersion) > Number(currentVersion)
         } catch (e) {
-            console.error("版本号比较失败:", e);
-            return false; // 无法比较则认为没有更新
+            console.error("下载更新失败:", e);
         }
+    } else {
+        console.log("当前已是最新版本: " + lpcalVer);
     }
-    // 类型相同时直接比较
-    return latestVersion > currentVersion;
 }
 
 /**
- * 下载更新脚本
- * @param {string} 下载的文件名
- * @param {Array} 保存了下载文件的保存路径和链接的数组
+ * 检查更新
  */
-function updateScript(fileName, downloadinfo) {
-
-    var updateUrl = downloadinfo.url;
-    var ScriptPath = files.join(files.cwd(), downloadinfo.savePath);
-
-    console.log("开始下载 " + fileName);
-    //console.log("下载链接: " + updateUrl);
-    console.log("保存路径: " + ScriptPath);
-    // --- 下载更新文件 ---
-    toastLog("开始下载更新...");
+function checkScriptUpdate() {
+    console.log("开始检查更新...");
+    var urlList = [
+    "https://github.moeyy.xyz/https://github.com/fgvsuiye/autojs6/blob/main/version.json",
+    "https://gitee.com/kuandana/autojs6/raw/master/version.json"
+    ];
+    var url = webTest(urlList);
+    if (!url) {
+        console.error("检查更新失败：无法连接到配置文件仓库。");
+        return;
+    }
     try {
-        var response = http.get(updateUrl, {
-            timeout: 10000 // 毫秒
-        });
-
-        if (response.statusCode == 200) {
-            // 确保目录存在
-            files.ensureDir(ScriptPath);
-            // 如果目标文件已存在，先备份
-            let fullFileName = files.join(ScriptPath, fileName)
-            if (files.exists(fullFileName)) {
-                files.rename(fullFileName, fullFileName + ".bak");
-                log("已备份原文件: " + fullFileName + ".bak");
+        let res = http.get(url);
+        if (res.statusCode == 200) {
+            let remoteVersionsData = res.body.json();
+            if (!remoteVersionsData) {
+                toastLog("无法解析远程版本信息 versions.json");
+                console.error("无法解析远程版本信息 versions.json");
+                return;
             }
-            // 写入文件
-            files.writeBytes(ScriptPath, response.body.bytes());
-            log("新版本已下载到: " + ScriptPath);
-
-            // --- 验证下载文件 (简单示例：检查文件是否存在且非空) ---
-            if (files.exists(ScriptPath)) {
-
-                // --- 检查更新器脚本是否存在 ---
-                var updaterScriptPath = files.cwd() + '/updater.js'
-                if (fileName == "main.js" && files.exists(updaterScriptPath)) {
-
-                    // --- 启动更新器脚本 ---
-                    engines.execScriptFile(updaterScriptPath);
-                    toastLog("准备更新main.js文件，主脚本即将退出...");
-                    // !!! 立即退出，以便 updater.js 可以操作 main.js 文件 !!!
-                    exit();
+            let localUpdaterVersion = getLocalVersion("updater.js");
+            let remoteUpdaterVersion = remoteVersionsData["updater.js"];
+            checkUpdater(localUpdaterVersion, remoteUpdaterVersion);
+            
+            for (let scriptPathInRepo in remoteVersionsData) {
+                if (scriptPathInRepo === "updater.js") continue;
+                let remoteVersion = remoteVersionsData[scriptPathInRepo];
+                let localVersion = getLocalVersion(scriptPathInRepo);
+                //console.log(`文件: ${scriptPathInRepo}, 本地版本: ${localVersion}, 远程版本: ${remoteVersion}`);
+                if (compareVersions(localVersion, remoteVersion)) {
+                    //console.log(`发现新版本: ${scriptPathInRepo} (本地 ${localVersion} -> 远程 ${remoteVersion})`);
+                    console.log("脚本结束后开始下载更新...");
+                    needsUpdate = true; // 设置标志
+                    return;
                 }
-            } else {
-                var errorMsg = "下载的文件无效 (不存在或为空): "
-                log(errorMsg);
             }
         } else {
-            var errorMsg = "下载失败: 服务器返回状态码 " + response.statusCode;
-            log(errorMsg);
-            try { log("服务器信息: " + response.body.string().slice(0,200)); } catch(e){}
-            toast(errorMsg);
+            toastLog("检查更新失败: 无法获取 versions.json, HTTP " + res.statusCode);
+            console.error("获取 versions.json 失败:", res.statusMessage);
         }
-
-    } catch (error) {
-        /* var errorMsg = "下载或处理更新时发生错误: " + error;
-        log(errorMsg);
-        toast(errorMsg);
-        // 如果下载过程中出错，确保临时文件被删除 (如果已创建)
-        if (files.exists(ScriptPath)) {
-            files.remove(ScriptPath);
-        } */
+    } catch (e) {
+        toastLog("检查更新时发生错误: " + e);
+        console.error("检查更新异常:", e);
     }
 }
 
@@ -1183,6 +1159,24 @@ function main() {
 
     // 设置退出时恢复
     events.on("exit", function() {
+        if (needsUpdate) {
+            console.log("主脚本执行完毕，开始执行更新程序...");
+            try {
+                // 确保 updater.js 的路径正确
+                let updaterPath = files.join(files.cwd(), "updater.js");
+                if (files.exists(updaterPath)) {
+                    engines.execScriptFile(updaterPath);
+                } else {
+                    console.error("错误：updater.js 未找到于 " + updaterPath);
+                    toastLog("错误：更新脚本 updater.js 未找到！");
+                }
+            } catch (e) {
+                console.error("启动 updater.js 失败:", e);
+                toastLog("启动更新程序失败: " + e);
+            }
+        } else {
+            console.log("Main.js 退出，无需更新。");
+        }
         console.hide(); // 隐藏控制台
         device.setMusicVolume(initialMusicVolume);
         device.cancelKeepingAwake();
@@ -1202,13 +1196,13 @@ function main() {
         }
         // 是否大于更新间隔
         if(today - sto > config.更新间隔){
+            setProxys();
             checkScriptUpdate();
         }else{
             console.log("距离上次更新时间小于更新间隔，跳过更新检查");
             console.log("更新间隔小于0时，每次运行时都检查更新");
         }
     }
-
     try {
         // 1. 处理屏幕状态和解锁
         if (!ensureDeviceUnlocked(3)) { // 最多尝试3次
@@ -1259,19 +1253,6 @@ function main() {
         killApp(APP_PACKAGE_NAME);
         home();
         log("操作完成，已返回主页");
-        // 7. 脚本更新
-        sleep(1000); // 等待一秒，确保日志输出完整
-        if (needUpdate && updateList.length > 0){
-            console.info(">>>>>>>---| 更新脚本 |---<<<<<<<");
-            for (var key in downloadList) {
-               if (updateList.indexOf(key) >= 0) {
-                   updateScript(key, downloadList[key]);
-               }else {
-                   //console.log("跳过 " + key);
-               }
-            } 
-            console.log("所有脚本更新完成");
-        }
         exit() 
     }
 }
