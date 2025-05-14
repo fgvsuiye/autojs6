@@ -3,7 +3,7 @@
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶
  * 更新日期：2025-05-14
- * 版本：    v3.1
+ * 版本：    v3.3
  * 更新内容:
     > 1. `修复` 自动更新文件列表由云端获取。
     > 2. `修复` 社区控件信息更新导致的验证码截图及签到失败。
@@ -42,7 +42,7 @@ var startTime = new Date().getTime(); // 用于脚本总超时计时
 var yoloProcessor = null; // 初始化为 null
 var lx, ly
 var needUpdate = false; // 是否需要更新
-var downloadList
+var downloadList, updateList; // 下载列表和更新日期
 var updateDate = storages.create("updateDate");
 let today = parseInt(todayDate.replace(/-/g, ''));
 
@@ -921,7 +921,7 @@ function webTest(urllist) {
         try {
             let url_res = http.get(url);
             if (url_res.statusCode == 200) {
-                log("链接:"  + urllist[j] + "可用");
+                log("链接:"  + j + "可用");
                 return url
             }
         } catch (e) {
@@ -952,7 +952,7 @@ function checkScriptUpdate() {
             });
             if (response.statusCode == 200) {
                 var configContent = response.body.string();
-                console.log("获取到配置文件内容:", configContent.substring(0, 100) + "..."); // 打印部分内容
+                //console.log("获取到配置文件内容:", configContent.substring(0, 100) + "..."); // 打印部分内容
 
                 try {
                     var config = JSON.parse(configContent);
@@ -974,7 +974,8 @@ function checkScriptUpdate() {
                     if (isNewerCustomVersion(latestVersion, CURRENT_SCRIPT_VERSION) ) {
                         needUpdate = true;
                         toastLog("发现新版本！,将在脚本结束后自动下载");
-                        updateList = config.downloadList; // 下载地址列表
+                        updateList = config.updateList; // 下载地址列表
+                        toastLog("本次更新文件：" + updateList);
                         //notifyUpdate(String(latestVersion), updateUrl, releaseNotes); // 统一转字符串给通知函数
                     } else {
                         console.log("当前已是最新版本。");
@@ -1084,11 +1085,11 @@ function updateScript(fileName, downloadinfo) {
         }
 
     } catch (error) {
-        var errorMsg = "下载或处理更新时发生错误: " + error;
+        /* var errorMsg = "下载或处理更新时发生错误: " + error;
         log(errorMsg);
         toast(errorMsg);
         // 如果下载过程中出错，确保临时文件被删除 (如果已创建)
-        /* if (files.exists(ScriptPath)) {
+        if (files.exists(ScriptPath)) {
             files.remove(ScriptPath);
         } */
     }
@@ -1180,7 +1181,7 @@ function main() {
     device.setMusicVolume(0); // 静音
     log("设备已静音");
 
-    // 设置退出时恢复音量
+    // 设置退出时恢复
     events.on("exit", function() {
         console.hide(); // 隐藏控制台
         device.setMusicVolume(initialMusicVolume);
@@ -1204,8 +1205,10 @@ function main() {
             checkScriptUpdate();
         }else{
             console.log("距离上次更新时间小于更新间隔，跳过更新检查");
+            console.log("更新间隔小于0时，每次运行时都检查更新");
         }
     }
+
     try {
         // 1. 处理屏幕状态和解锁
         if (!ensureDeviceUnlocked(3)) { // 最多尝试3次
