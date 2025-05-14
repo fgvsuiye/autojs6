@@ -1,4 +1,7 @@
-// yolov11.js - YOLO 检测与结果处理模块
+/**
+ * @version 20250514
+ * YOLOv11 调用模块
+ */
 var config = require("../tmp/config.js");
 // --- 常量定义 ---
 const YOLO_PLUGIN_NAME = "com.circlefork.yolo"; // 插件包名
