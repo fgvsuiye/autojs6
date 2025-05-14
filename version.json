@@ -3,7 +3,7 @@
   "latestVersion": 20250514, 
   "updateUrl": "https://github.com/fgvsuiye/autojs6", 
   "releaseNotes": "1. `修复` 社区控件信息更新导致的验证码截图及签到失败。",
-  "updateList" : ["main.js"],
+  "updateList" : ["config.js", "yolov11.js", "updater.js", "main.js"],
   "downloadList": {
     "config.js": {
       "url": "https://gh-proxy.com/raw.githubusercontent.com/fgvsuiye/autojs6/refs/heads/main/tmp/config.js",
