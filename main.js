@@ -10,8 +10,7 @@
     > 3. 本次更新文件（`updater.js`, `main.js`）
 */
 // 更新参数
-var updateList = ["updater.js","main.js"];        // 需要更新的文件列表
-const CURRENT_SCRIPT_VERSION = 20250513;          // 当前脚本版本号
+const CURRENT_SCRIPT_VERSION = 20250514;          // 当前脚本版本号
 
 var config = require("./tmp/config.js"); // 引入配置文件
 importClass(android.content.Context);
@@ -976,6 +975,7 @@ function checkScriptUpdate() {
                     if (isNewerCustomVersion(latestVersion, CURRENT_SCRIPT_VERSION) ) {
                         needUpdate = true;
                         toastLog("发现新版本！,将在脚本结束后自动下载");
+                        updateList = config.downloadList; // 下载地址列表
                         //notifyUpdate(String(latestVersion), updateUrl, releaseNotes); // 统一转字符串给通知函数
                     } else {
                         console.log("当前已是最新版本。");
