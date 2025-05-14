@@ -154,7 +154,7 @@ function performUpdates() {
                     if (scriptPathInRepo == configPath) {
                         // 特殊处理 config.js
                         if (files.exists(localFullPath)) {
-                            fileName = files.getName(localFullPath) + "." + new Date().getTime() + ".bak";
+                            fileName = files.getName(localFullPath) + ".bak";
                             files.rename(localFullPath, fileName);
                             console.log(`备份旧 ${configPath} 到 ${fileName}`);
                         }
