@@ -1,14 +1,11 @@
 /**
- * @version 20250514
+ * @version 20250515
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶
- * 更新日期：2025-05-14
  * 更新内容:
-    > 1. `修复` 自动更新文件列表由云端获取。
-    > 2. `修复` 社区控件信息更新导致的验证码截图及签到失败。
-    > 3. `优化` 旗舰活动解锁判断。
-    
+    > 1. `优化` config文件更新时，保存为.bak而源文件不变。
+    > 2. `优化` 首次运行时，自动下载更新脚本。
 */
 
 
@@ -945,7 +942,7 @@ function webTest(urllist) {
                 timeout: 2000,
             });
             if (url_res.statusCode == 200) {
-                log("链接:"  + j + "可用");
+                log("链接:"  + urllist[j] + "可用");
                 return url
             }
         } catch (e) {
@@ -996,8 +993,11 @@ function compareVersions(localVersion, serverVersion) {
     var numServer = normalizeVersion(serverVersion);
     if (numLocal < numServer) return true;
 }
+
 /**
  * 检查并下载 updater.js
+ * @param {string|number} localVersion - 本地版本号
+ * @param {string|number} remoteVersion - 服务器版本号
  */
 function checkUpdater(lpcalVer, remoteVer) {
     let url = proxy + "https://github.com/fgvsuiye/autojs6/blob/main/updater.js"
@@ -1190,12 +1190,14 @@ function main() {
         console.info(">>>>>>>---| 检查更新 |---<<<<<<<");
         let sto =updateDate.get('updateDate');
         // 是否为首次存储
+        let firstStore = false;
         if(sto == null){
-            console.log("首次存储");
+            console.log("首次启动");
+            firstStore = true;
             updateDate.put('updateDate', today)
         }
         // 是否大于更新间隔
-        if(today - sto > config.更新间隔){
+        if(today - sto > config.更新间隔 || firstStore){
             setProxys();
             checkScriptUpdate();
         }else{
@@ -1243,7 +1245,7 @@ function main() {
         if (config.双旗舰) dualFlagshipActivity(); //
         if (config.感恩季) thanksgivingActivity(); // 
         if (isInSignPage() && config.成长值记录) {
-             recordLevel();
+            recordLevel();
         }
         log("所有配置的任务已执行完毕");
     } catch (e) {
