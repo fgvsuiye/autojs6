@@ -1,11 +1,11 @@
 /**
- * @version 20250514
+ * @version 20250515
  * 更新器脚本
  */
 
 
+console.setSize(0.9, 0.5).show();
 console.info(">>>>>>>---| 检查更新 |---<<<<<<<");
-
 var proxy
 setProxys();
 function setProxys() {
@@ -102,9 +102,8 @@ function downloadFile(scriptPathInRepo, localFullPath) {
             let tempPath = localFullPath + ".tmp";
             files.write(tempPath, res.body.string());
             if (files.exists(tempPath)) { // 简单校验
-                fileName = files.getName(tempPath);
-                finName = fileName.split(".")[0] + "." + fileName.split(".")[1];
-                files.rename(tempPath, finName) ; // 覆盖原文件
+                fileName = files.getName(localFullPath);
+                files.rename(tempPath, fileName) ; // 覆盖原文件
                 console.log(`文件 ${scriptPathInRepo} 下载并保存到 ${localFullPath} 成功。`);
                 return true;
             } else {
@@ -154,9 +153,9 @@ function performUpdates() {
                     if (scriptPathInRepo == configPath) {
                         // 特殊处理 config.js
                         if (files.exists(localFullPath)) {
-                            fileName = files.getName(localFullPath) + ".bak";
-                            files.rename(localFullPath, fileName);
-                            console.log(`备份旧 ${configPath} 到 ${fileName}`);
+                            let fileName = files.getName(localFullPath);
+                            console.log(`${fileName} 已存在，下载文件保存为 ${fileName}.bak`);
+                            localFullPath = localFullPath + ".bak";
                         }
                         if (downloadFile(scriptPathInRepo, localFullPath)) {
                             console.error(`${configPath} 已更新为最新默认配置。请检查备份并合并您的设置。`);
@@ -179,7 +178,7 @@ function performUpdates() {
             }
 
             if (updatesPerformedCount > 0) {
-                console.log(`共 ${updatesPerformedCount} 个文件已更新。部分更新可能需要重启脚本才能生效。`);
+                console.info(`更新完成，本次更新共 ${updatesPerformedCount} 个文件。`);
             } else {
                 console.log("所有受管理的文件已是最新或未找到更新目标。");
             }
@@ -196,4 +195,5 @@ function performUpdates() {
 
 // 执行更新
 performUpdates();
+console.hide();
 engines.stopAllAndToast(); 
