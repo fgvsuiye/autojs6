@@ -349,3 +349,6 @@ function main() {
     files.remove(newConfigPath);
 }
 main();
+console.log("配置合并完成，脚本将在3秒后关闭...");
+sleep(3000);
+console.hide();
