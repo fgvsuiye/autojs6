@@ -1,32 +1,25 @@
 /**
- * @version 20250515
- * 更新器脚本
+ * @version 20250516
+ * @description 更新器脚本
+ *               自动检查更新并下载更新文件。
  */
 
 
 console.setSize(0.9, 0.5).show();
 console.info(">>>>>>>---| 检查更新 |---<<<<<<<");
-var proxy
-setProxys();
-function setProxys() {
-    github = "https://github.com/fgvsuiye/autojs6/blob/main/version.json"
-    proxys = [
-        "https://github.moeyy.xyz/", 
-        "https://gh-proxy.com/", 
-        "https://gh.llkk.cc/",
-        "https://git.886.be/",
-        "https://ghfast.top/",
-        "https://gh-proxy.ygxz.in/",
-        "https://github.fxxk.dedyn.io/",
-    ];
-    for (let i = 0; i < proxys.length; i++) {
-        url = proxys[i] + github
-        if(webTest([url])){
-            proxy = proxys[i]
-            break;
-        }
-    }
+const receiver = engines.myEngine().execArgv;
+var proxy, remoteVersionsData
+if (receiver && typeof receiver.proxy !== "undefined" && typeof receiver.remoteVersionsData !== "undefined") {
+    proxy = receiver.proxy;
+    remoteVersionsData = receiver.remoteVersionsData;
+}else {
+    console.error("接收器参数错误，无法获取代理和更新列表。");
+    engines.stopAllAndToast();
+    exit();
 }
+var updateKeys = remoteVersionsData["updateKeys"];
+if (!updateKeys || updateKeys.length === 0) updateKeys = ["小程序签到", "成长值记录", "浏览帖子", "加入圈子", "观看视频", "米粉节", "感恩季", "双旗舰", "拔萝卜"];
+
 
 /**
  * 获取本地文件的版本号
@@ -68,27 +61,6 @@ function compareVersions(localVersion, serverVersion) {
     if (numLocal < numServer) return true;
 }
 
-/**
- * 链接可用测试
- * @param {Array} urllist - 需要测试的链接列表
- * @returns {string} 可用的链接，或 false
- */
-function webTest(urllist) {
-    log("开始测试链接");
-    for (let j = 0; j < urllist.length; j++) {
-        url = urllist[j];
-        try {
-            let url_res = http.get(url);
-            if (url_res.statusCode == 200) {
-                //console.log("链接:"  + urllist[j] + "可用"]);
-                return url
-            }
-        } catch (e) {
-            log("链接:"  + urllist[j] + " 连接失败");
-        }
-    }
-    return false;
-}
 
 function downloadFile(scriptPathInRepo, localFullPath) {
     var downloadUrl = proxy + "https://github.com/fgvsuiye/autojs6/blob/main/" + scriptPathInRepo + "?timestamp=" + new Date().getTime();
@@ -123,68 +95,48 @@ function downloadFile(scriptPathInRepo, localFullPath) {
 
 // --- 更新逻辑 ---
 function performUpdates() {
-    let urllist = [
-        "https://github.moeyy.xyz/https://github.com/fgvsuiye/autojs6/blob/main/version.json",
-        "https://gitee.com/kuandana/autojs6/raw/master/version.json"
-    ];
     var configPath = "/tmp/config.js"; // 相对于项目根目录的路径
-    let updatesPerformedCount = 0;
-    let url = webTest(urllist);
-    if (!url) {
-        console.error("检查更新失败：无法连接到配置文件仓库。");
-        return;
-    }
+    var updatesPerformedCount = 0;
     try {
-        let res = http.get(url);
-        if (res.statusCode == 200) {
-            let remoteVersionsData = res.body.json();
-            if (!remoteVersionsData) {
-                console.error("无法解析远程版本信息 versions.json");
-                return;
-            }
-            //console.log("远程版本信息:", JSON.stringify(remoteVersionsData));
-            for (let scriptPathInRepo in remoteVersionsData) {
-                let remoteVersion = remoteVersionsData[scriptPathInRepo];
-                let localVersion = getLocalVersion(scriptPathInRepo);
-                let localFullPath = files.join(files.cwd(), scriptPathInRepo);
-                if (scriptPathInRepo === "updater.js") continue; // 跳过更新器自身
-                if (compareVersions(localVersion, remoteVersion) ) {
-                    console.log(`需要更新: ${scriptPathInRepo} (本地: ${localVersion}, 远程: ${remoteVersion})`);
-                    if (scriptPathInRepo == configPath) {
-                        // 特殊处理 config.js
-                        if (files.exists(localFullPath)) {
-                            let fileName = files.getName(localFullPath);
-                            console.log(`${fileName} 已存在，下载文件保存为 ${fileName}.bak`);
-                            localFullPath = localFullPath + ".bak";
-                        }
-                        if (downloadFile(scriptPathInRepo, localFullPath)) {
-                            console.error(`${configPath} 已更新为最新默认配置。请检查备份并合并您的设置。`);
-                            updatesPerformedCount++;
-                        } else {
-                            console.log(`更新 ${configPath} 失败!`);
-                        }
+        
+        for (let scriptPathInRepo in remoteVersionsData) {
+            let remoteVersion = remoteVersionsData[scriptPathInRepo];
+            let localVersion = getLocalVersion(scriptPathInRepo);
+            let localFullPath = files.join(files.cwd(), scriptPathInRepo);
+            if (scriptPathInRepo === "updater.js") continue; // 跳过更新器自身
+            if (compareVersions(localVersion, remoteVersion) ) {
+                console.log(`需要更新: ${scriptPathInRepo} (本地: ${localVersion}, 远程: ${remoteVersion})`);
+                if (scriptPathInRepo == configPath) {
+                    // 特殊处理 config.js
+                    if (files.exists(localFullPath)) {
+                        let fileName = files.getName(localFullPath);
+                        console.log(`${fileName} 已存在，下载文件保存为 ${fileName}.bak`);
+                        localFullPath = localFullPath + ".txt";
+                    }
+                    if (downloadFile(scriptPathInRepo, localFullPath)) {
+                        console.error(`${configPath} 已下载成功，准备合并配置...`);
+                        
+                        updatesPerformedCount++;
                     } else {
-                        // 其他文件直接覆盖
-                        if (downloadFile(scriptPathInRepo, localFullPath)) {
-                            console.log(`${scriptPathInRepo} 更新成功!`);
-                            updatesPerformedCount++;
-                        } else {
-                            console.log(`更新 ${scriptPathInRepo} 失败!`);
-                        }
+                        console.log(`更新 ${configPath} 失败!`);
                     }
                 } else {
-                    console.log(`${scriptPathInRepo} 无需更新 (本地: ${localVersion}, 远程: ${remoteVersion})`);
+                    // 其他文件直接覆盖
+                    if (downloadFile(scriptPathInRepo, localFullPath)) {
+                        console.log(`${scriptPathInRepo} 更新成功!`);
+                        updatesPerformedCount++;
+                    } else {
+                        console.log(`更新 ${scriptPathInRepo} 失败!`);
+                    }
                 }
-            }
-
-            if (updatesPerformedCount > 0) {
-                console.info(`更新完成，本次更新共 ${updatesPerformedCount} 个文件。`);
             } else {
-                console.log("所有受管理的文件已是最新或未找到更新目标。");
+                console.log(`${scriptPathInRepo} 无需更新 (本地: ${localVersion}, 远程: ${remoteVersion})`);
             }
-
+        }
+        if (updatesPerformedCount > 0) {
+            console.info(`更新完成，本次更新共 ${updatesPerformedCount} 个文件。`);
         } else {
-            console.error("获取 versions.json 失败:", res.statusMessage);
+            console.log("所有受管理的文件已是最新或未找到更新目标。");
         }
     } catch (e) {
         console.error("更新异常:", e);
@@ -192,8 +144,18 @@ function performUpdates() {
         console.log("Updater.js 执行完毕。");
     }
 }
-
-// 执行更新
+// 监听退出事件
+events.on("exit", function() {
+    let path = files.join(files.cwd(), "tmp/mergeConfigs.js");
+    if  (!files.exists(path)) {
+        console.error("合并配置脚本不存在，无法执行。");
+        return;
+    }
+    engines.execScriptFile(path, {
+        arguments: {
+            updateKeys: updateKeys
+        }
+    })
+});
 performUpdates();
 console.hide();
-engines.stopAllAndToast(); 

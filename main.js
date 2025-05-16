@@ -1,5 +1,5 @@
 /**
- * @version 20250515
+ * @version 20250516
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶
@@ -11,12 +11,6 @@
 
 var config = require("./tmp/config.js"); // 引入配置文件
 importClass(android.content.Context);
-importClass(android.app.NotificationManager);
-importClass(android.app.PendingIntent);
-importClass(android.content.Intent);
-importClass(android.net.Uri);
-importClass(androidx.core.app.NotificationCompat);
-importClass(android.os.Build);
 
 // --- 常量定义 ---
 const APP_PACKAGE_NAME = config.packageName;      // 小米社区包名
@@ -27,9 +21,6 @@ const DEFAULT_TIMEOUT = config.defaultTimeout;    // 默认查找超时时间 (m
 const SHORT_TIMEOUT = config.shortTimeout;        // 较短超时时间
 const RETRY_TIMES = config.retryTimes;            // 主要操作的重试次数
 
-const NOTIFICATION_CHANNEL_ID = "AutoJsUpdateChannel";// 通知渠道 ID
-const NOTIFICATION_CHANNEL_NAME = "脚本更新通知"; // 显示在系统设置中的渠道名称
-
 // --- 全局变量 ---
 var dwidth = device.width;
 var dheight = device.height;
@@ -37,11 +28,10 @@ var todayDate = formatDate(new Date());
 var startTime = new Date().getTime(); // 用于脚本总超时计时
 var yoloProcessor = null; // 初始化为 null
 var lx, ly
-var downloadList, updateList; // 下载列表和更新日期
 var needsUpdate = false; // 是否需要更新
 var updateDate = storages.create("updateDate");
 var today = parseInt(todayDate.replace(/-/g, ''));
-var proxy
+var proxy, remoteVersionsData;
 
 
 
@@ -64,7 +54,6 @@ try {
     log("YOLO 处理模块加载成功");
 } catch (e) {
     console.error(`加载 YOLO 处理模块失败: ${e}`);
-    toastLog(`加载 YOLO 模块失败，签到功能可能无法使用！`);
 }
 
 // --- 启动脚本运行超时监控 ---
@@ -942,7 +931,7 @@ function webTest(urllist) {
                 timeout: 2000,
             });
             if (url_res.statusCode == 200) {
-                log("链接:"  + urllist[j] + "可用");
+                //log("链接:"  + urllist[j] + "可用");
                 return url
             }
         } catch (e) {
@@ -1039,9 +1028,8 @@ function checkScriptUpdate() {
     try {
         let res = http.get(url);
         if (res.statusCode == 200) {
-            let remoteVersionsData = res.body.json();
+            remoteVersionsData = res.body.json();
             if (!remoteVersionsData) {
-                toastLog("无法解析远程版本信息 versions.json");
                 console.error("无法解析远程版本信息 versions.json");
                 return;
             }
@@ -1053,100 +1041,21 @@ function checkScriptUpdate() {
                 if (scriptPathInRepo === "updater.js") continue;
                 let remoteVersion = remoteVersionsData[scriptPathInRepo];
                 let localVersion = getLocalVersion(scriptPathInRepo);
-                //console.log(`文件: ${scriptPathInRepo}, 本地版本: ${localVersion}, 远程版本: ${remoteVersion}`);
                 if (compareVersions(localVersion, remoteVersion)) {
-                    //console.log(`发现新版本: ${scriptPathInRepo} (本地 ${localVersion} -> 远程 ${remoteVersion})`);
-                    console.log("脚本结束后开始下载更新...");
                     needsUpdate = true; // 设置标志
-                    return;
+                    console.log("发现新版本,将在主脚本执行完毕后执行更新程序");
+                    return; // 找到一个更新就退出
+
                 }
             }
         } else {
-            toastLog("检查更新失败: 无法获取 versions.json, HTTP " + res.statusCode);
             console.error("获取 versions.json 失败:", res.statusMessage);
         }
     } catch (e) {
-        toastLog("检查更新时发生错误: " + e);
         console.error("检查更新异常:", e);
     }
 }
 
-/**
- * 发送更新通知 (适配 Auto.js v4.1.1)
- * @param {string} newVersion - 新版本号 (字符串形式)
- * @param {string} url - 点击通知后跳转的 URL
- * @param {string} notes - 更新日志
- */
-function notifyUpdate(newVersion, url, notes) {
-    var notificationId = 1001; // 给这个通知一个唯一的 ID
-    var notificationTitle = "脚本更新提醒";
-    var notificationText = `发现新版本 ${newVersion}！点击查看详情。`;
-    var shortNotes = notes.split('\n')[0] || notes.substring(0, 50);
-    if (shortNotes && shortNotes.length < notes.length) {
-        shortNotes += "...";
-    }
-    var fullNotificationText = notificationText + "\n更新内容: " + shortNotes;
-
-    try {
-        // 1. 获取 NotificationManager 系统服务
-        var nm = context.getSystemService(context.NOTIFICATION_SERVICE);
-
-        // 2. (仅在 Android 8.0 及以上版本) 创建通知渠道
-        // 最好在脚本启动时创建一次，但放在这里也能确保它存在
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            var channel = new android.app.NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
-                NOTIFICATION_CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_DEFAULT // 设置通知重要性级别
-            );
-            // channel.setDescription("接收脚本版本更新提醒"); // 可选的渠道描述
-            nm.createNotificationChannel(channel); // 创建渠道
-        }
-
-        // 3. 创建一个 Intent，用于在点击通知时打开 URL
-        // 使用 Android 原生 Intent
-        var intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-        // 如果 app.intent 确实存在且能创建 VIEW Intent，也可以用：
-        // var intent = app.intent({ action: "VIEW", data: url });
-
-        // 4. 创建 PendingIntent，包装上面的 Intent
-        var pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { 
-             pendingIntentFlags |= PendingIntent.FLAG_IMMUTABLE;
-        }
-        var pendingIntent = PendingIntent.getActivity(context, 0, intent, pendingIntentFlags);
-
-
-        // 5. 使用 NotificationCompat.Builder 构建通知
-        var builder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
-            // !!必须设置一个小图标!! 使用 Android 系统自带的图标
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            // 也可以尝试 Auto.js 的图标资源，但不保证路径固定不变
-            // .setSmallIcon(org.autojs.autojs.R.drawable.autojs_material) // 不建议，可能随版本变化
-            .setContentTitle(notificationTitle) // 设置通知标题
-            .setContentText(fullNotificationText) // 设置通知主文本
-            .setContentIntent(pendingIntent) // 设置点击通知时触发的 Intent
-            .setAutoCancel(true) // 设置点击通知后自动清除通知
-            .setDefaults(NotificationCompat.DEFAULT_ALL) // 使用系统默认的通知声音、震动等
-            // 如果需要显示更长的文本，可以使用 BigTextStyle
-            // .setStyle(new NotificationCompat.BigTextStyle().bigText(fullNotificationText + "\n\n" + notes));
-
-
-        // 6. 发送通知
-        nm.notify(notificationId, builder.build());
-
-    } catch (error) {
-        console.error("发送通知时出错:", error);
-        log("堆栈跟踪:", error.stack); // 打印更详细的错误堆栈
-        toastLog("发送通知失败，错误信息请查看日志。");
-        // 提供备选信息给用户
-        console.log("---- 更新信息 ----");
-        console.log("新版本: " + newVersion);
-        console.log("更新地址: " + url);
-        console.log("更新内容: " + notes.substring(0, 100) + "...");
-        console.log("---- 更新信息结束 ----");
-    }
-}
 
 // ========================
 // === 主程序逻辑 ===
@@ -1165,14 +1074,17 @@ function main() {
                 // 确保 updater.js 的路径正确
                 let updaterPath = files.join(files.cwd(), "updater.js");
                 if (files.exists(updaterPath)) {
-                    engines.execScriptFile(updaterPath);
+                    engines.execScriptFile(updaterPath, {
+                        arguments: {
+                            proxy: proxy,
+                            remoteVersionsData: remoteVersionsData,
+                        }
+                    });
                 } else {
                     console.error("错误：updater.js 未找到于 " + updaterPath);
-                    toastLog("错误：更新脚本 updater.js 未找到！");
                 }
             } catch (e) {
                 console.error("启动 updater.js 失败:", e);
-                toastLog("启动更新程序失败: " + e);
             }
         } else {
             console.log("Main.js 退出，无需更新。");
