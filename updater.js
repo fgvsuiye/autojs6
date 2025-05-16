@@ -8,7 +8,8 @@
 console.setSize(0.9, 0.5).show();
 console.info(">>>>>>>---| 检查更新 |---<<<<<<<");
 const receiver = engines.myEngine().execArgv;
-var proxy, remoteVersionsData
+var proxy, remoteVersionsData 
+var configNeedsMerge = false;
 if (receiver && typeof receiver.proxy !== "undefined" && typeof receiver.remoteVersionsData !== "undefined") {
     proxy = receiver.proxy;
     remoteVersionsData = receiver.remoteVersionsData;
@@ -64,7 +65,6 @@ function compareVersions(localVersion, serverVersion) {
 
 function downloadFile(scriptPathInRepo, localFullPath) {
     var downloadUrl = proxy + "https://github.com/fgvsuiye/autojs6/blob/main/" + scriptPathInRepo + "?timestamp=" + new Date().getTime();
-    console.log(`准备下载: ${scriptPathInRepo}`);
     try {
         let res = http.get(downloadUrl);
         if (res.statusCode == 200) {
@@ -101,16 +101,16 @@ function performUpdates() {
         
         for (let scriptPathInRepo in remoteVersionsData) {
             let remoteVersion = remoteVersionsData[scriptPathInRepo];
+            if (typeof remoteVersion !== "number") continue; // 跳过非数字项
+            if (scriptPathInRepo === "updater.js") continue; // 跳过更新器自身
             let localVersion = getLocalVersion(scriptPathInRepo);
             let localFullPath = files.join(files.cwd(), scriptPathInRepo);
-            if (scriptPathInRepo === "updater.js") continue; // 跳过更新器自身
             if (compareVersions(localVersion, remoteVersion) ) {
                 console.log(`需要更新: ${scriptPathInRepo} (本地: ${localVersion}, 远程: ${remoteVersion})`);
                 if (scriptPathInRepo == configPath) {
                     // 特殊处理 config.js
+                    configNeedsMerge = true;
                     if (files.exists(localFullPath)) {
-                        let fileName = files.getName(localFullPath);
-                        console.log(`${fileName} 已存在，下载文件保存为 ${fileName}.bak`);
                         localFullPath = localFullPath + ".txt";
                     }
                     if (downloadFile(scriptPathInRepo, localFullPath)) {
@@ -144,18 +144,26 @@ function performUpdates() {
         console.log("Updater.js 执行完毕。");
     }
 }
-// 监听退出事件
-events.on("exit", function() {
-    let path = files.join(files.cwd(), "tmp/mergeConfigs.js");
-    if  (!files.exists(path)) {
-        console.error("合并配置脚本不存在，无法执行。");
-        return;
-    }
-    engines.execScriptFile(path, {
-        arguments: {
-            updateKeys: updateKeys
-        }
-    })
-});
+
 performUpdates();
-console.hide();
+
+if (configNeedsMerge) {
+    // 监听退出事件
+    events.on("exit", function() {
+        let path = files.join(files.cwd(), "tmp/mergeConfigs.js");
+        if  (!files.exists(path)) {
+            console.error("合并配置脚本不存在，无法执行。");
+            return;
+        }
+        engines.execScriptFile(path, {
+            arguments: {
+                updateKeys: updateKeys
+            }
+        })
+    });
+}else{
+    console.log("更新完成，脚本将在3秒后关闭...");
+    sleep(3000);
+    console.hide();
+}
+
