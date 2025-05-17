@@ -1003,14 +1003,14 @@ function compareVersions(localVersion, serverVersion) {
 function checkUpdater(lpcalVer, remoteVer) {
     let url = proxy + "https://github.com/fgvsuiye/autojs6/blob/main/updater.js"
     if (compareVersions(lpcalVer, remoteVer)) {
-        console.log("发现新版本: " + remoteVer + " (本地 " + lpcalVer + ")");
+        console.log("发现新版更新器: " + remoteVer + " (本地 " + lpcalVer + ")");
         console.log("开始下载更新...");
         try {
             let response = http.get(url, {
             });
             if (response.statusCode == 200) {
                 let content = response.body.string();
-                console.log("下载成功，开始写入本地文件...");
+                console.log("下载成功");
                 files.write(files.join(files.cwd(), "updater.js"), content);
             } else {
                 console.error("下载失败: HTTP " + response.statusCode);
@@ -1055,7 +1055,7 @@ function checkScriptUpdate() {
                 let localVersion = getLocalVersion(scriptPathInRepo);
                 if (compareVersions(localVersion, remoteVersion)) {
                     needsUpdate = true; // 设置标志
-                    console.log("发现新版本,将在主脚本执行完毕后执行更新程序");
+                    console.log("发现其它脚本有新版本，将在脚本执行完毕后自动更新。");
                     return; // 找到一个更新就退出
 
                 }
@@ -1109,11 +1109,10 @@ function main() {
             log(`设备音量已恢复到 ${initialMusicVolume}`);
             log(`脚本运行总耗时: ${((new Date().getTime() - startTime) / 1000).toFixed(2)} 秒`);
         }else{
-            console.log("全量更新，不恢复设备音量");
+            console.log("全量更新");
         }
         console.warn(">>>>>>>---| 脚本结束 |---<<<<<<<");
     });
-    log(">>>>>>-<<<<<<<");
     if (isFullUpdate) exit();
     // 检查更新
     if (config.检查更新 != 0) {
