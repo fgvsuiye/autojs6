@@ -2,8 +2,8 @@
 {
   "/tmp/config.js": 20250514,
   "/yolov11/yolov11.js": 20250514,
-  "updater.js": 20250516,
-  "main.js": 20250516,
+  "updater.js": 20250517,
+  "main.js": 20250517,
   "/tmp/mergeConfigs.js": 20250516,
   "updateKeys": ["小程序签到", "浏览帖子", "加入圈子", "观看视频", "米粉节", "感恩季", "双旗舰", "拔萝卜"]
 }

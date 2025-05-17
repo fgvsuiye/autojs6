@@ -1,5 +1,5 @@
 /**
- * @version 20250516
+ * @version 20250517
  * @description 更新器脚本
  *               自动检查更新并下载更新文件。
  */
@@ -109,13 +109,12 @@ function performUpdates() {
                 console.log(`需要更新: ${scriptPathInRepo} (本地: ${localVersion}, 远程: ${remoteVersion})`);
                 if (scriptPathInRepo == configPath) {
                     // 特殊处理 config.js
-                    configNeedsMerge = true;
                     if (files.exists(localFullPath)) {
+                        configNeedsMerge = true;
                         localFullPath = localFullPath + ".txt";
                     }
                     if (downloadFile(scriptPathInRepo, localFullPath)) {
                         console.error(`${configPath} 已下载成功，准备合并配置...`);
-                        
                         updatesPerformedCount++;
                     } else {
                         console.log(`更新 ${configPath} 失败!`);
