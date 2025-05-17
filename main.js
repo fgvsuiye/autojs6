@@ -1,15 +1,21 @@
 /**
- * @version 20250516
+ * @version 20250517
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶
- * 更新内容:
-    > 1. `优化` config文件更新时，保存为.bak而源文件不变。
-    > 2. `优化` 首次运行时，自动下载更新脚本。
 */
 
-
-var config = require("./tmp/config.js"); // 引入配置文件
+try {
+    var config = require("./tmp/config.js");
+} catch (e) {
+    config = {};
+    console.log("配置文件不存在，准备执行更新程序...");
+    needsUpdate = true;
+    isFullUpdate = true;
+    setProxys();
+    checkScriptUpdate();
+    main();
+}
 importClass(android.content.Context);
 
 // --- 常量定义 ---
@@ -27,12 +33,13 @@ var dheight = device.height;
 var todayDate = formatDate(new Date());
 var startTime = new Date().getTime(); // 用于脚本总超时计时
 var yoloProcessor = null; // 初始化为 null
-var lx, ly
+var lx, ly, isFullUpdate
 var needsUpdate = false; // 是否需要更新
 var updateDate = storages.create("updateDate");
 var today = parseInt(todayDate.replace(/-/g, ''));
 var proxy, remoteVersionsData;
 
+// 定义是否全量更新的变量
 
 
 console.setSize(dwidth, dheight * 0.25)
@@ -551,6 +558,11 @@ function performSign() {
 
         if (safeClick(signInButton, "点击 '立即签到'")) {
              sleep(1000); // 等待验证码界面加载
+            // 申请截图权限
+            if(!requestScreenCapture()){
+                toastLog("请求截图权限失败");
+                return false;
+            }
             return handleNewSign(); // 处理带验证码的签到
         } else {
             log("点击 '立即签到' 失败");
@@ -1062,10 +1074,11 @@ function checkScriptUpdate() {
 // ========================
 function main() {
 
-    let initialMusicVolume = device.getMusicVolume();
-    device.setMusicVolume(0); // 静音
-    log("设备已静音");
-
+    if (!isFullUpdate) {
+        var initialMusicVolume = device.getMusicVolume();
+        device.setMusicVolume(0); // 静音
+        log("设备已静音");
+    }
     // 设置退出时恢复
     events.on("exit", function() {
         if (needsUpdate) {
@@ -1089,14 +1102,19 @@ function main() {
         } else {
             console.log("Main.js 退出，无需更新。");
         }
-        console.hide(); // 隐藏控制台
-        device.setMusicVolume(initialMusicVolume);
-        device.cancelKeepingAwake();
-        log(`设备音量已恢复到 ${initialMusicVolume}`);
-        log(`脚本运行总耗时: ${((new Date().getTime() - startTime) / 1000).toFixed(2)} 秒`);
+        if (!isFullUpdate) {
+            console.hide(); // 隐藏控制台
+            device.setMusicVolume(initialMusicVolume);
+            device.cancelKeepingAwake();
+            log(`设备音量已恢复到 ${initialMusicVolume}`);
+            log(`脚本运行总耗时: ${((new Date().getTime() - startTime) / 1000).toFixed(2)} 秒`);
+        }else{
+            console.log("全量更新，不恢复设备音量");
+        }
         console.warn(">>>>>>>---| 脚本结束 |---<<<<<<<");
     });
-
+    log(">>>>>>-<<<<<<<");
+    if (isFullUpdate) exit();
     // 检查更新
     if (config.检查更新 != 0) {
         console.info(">>>>>>>---| 检查更新 |---<<<<<<<");
@@ -1118,6 +1136,7 @@ function main() {
             console.log("更新间隔小于0时，每次运行时都检查更新");
         }
     }
+    
     try {
         // 1. 处理屏幕状态和解锁
         if (!ensureDeviceUnlocked(3)) { // 最多尝试3次
