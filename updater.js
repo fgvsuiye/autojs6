@@ -106,15 +106,16 @@ function performUpdates() {
             let localVersion = getLocalVersion(scriptPathInRepo);
             let localFullPath = files.join(files.cwd(), scriptPathInRepo);
             if (compareVersions(localVersion, remoteVersion) ) {
-                console.log(`需要更新: ${scriptPathInRepo} (本地: ${localVersion}, 远程: ${remoteVersion})`);
+                console.log(` ${scriptPathInRepo} 需要更新 (本地: ${localVersion}, 远程: ${remoteVersion})`);
                 if (scriptPathInRepo == configPath) {
                     // 特殊处理 config.js
                     if (files.exists(localFullPath)) {
                         configNeedsMerge = true;
+                        console.log("发现配置文件需要合并，将在脚本执行完毕后自动合并。");
                         localFullPath = localFullPath + ".txt";
                     }
                     if (downloadFile(scriptPathInRepo, localFullPath)) {
-                        console.error(`${configPath} 已下载成功，准备合并配置...`);
+                        console.error(`${configPath} 已下载成功，`);
                         updatesPerformedCount++;
                     } else {
                         console.log(`更新 ${configPath} 失败!`);
@@ -122,7 +123,7 @@ function performUpdates() {
                 } else {
                     // 其他文件直接覆盖
                     if (downloadFile(scriptPathInRepo, localFullPath)) {
-                        console.log(`${scriptPathInRepo} 更新成功!`);
+                        console.error(`${scriptPathInRepo} 更新成功!`);
                         updatesPerformedCount++;
                     } else {
                         console.log(`更新 ${scriptPathInRepo} 失败!`);
