@@ -1098,7 +1098,7 @@ function main() {
     });
 
     // 检查更新
-    if (config.检查更新) {
+    if (config.检查更新 != 0) {
         console.info(">>>>>>>---| 检查更新 |---<<<<<<<");
         let sto =updateDate.get('updateDate');
         // 是否为首次存储
@@ -1108,6 +1108,7 @@ function main() {
             firstStore = true;
             updateDate.put('updateDate', today)
         }
+        if(typeof config.更新间隔 != 'number') config.更新间隔 = -1;
         // 是否大于更新间隔
         if(today - sto > config.更新间隔 || firstStore){
             setProxys();
