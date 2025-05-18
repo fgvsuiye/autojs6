@@ -21,28 +21,21 @@
 ## **使用说明**
 1. 下载autojs6
    * [点击去下载](https://github.com/SuperMonster003/AutoJs6/releases)
-
-2. 下载脚本及模型文件
-   * [点击去下载](https://github.com/fgvsuiye/autojs6/releases/tag/YoloModelAndPlugins)（***XiaoMiSign.7z***）
-
-
-3. 解压
-   * 将压缩包内所有文件解压至autojs工作路径（默认为`/storage/emulated/0/脚本/` ）内   
-4. 安装Yolo模型插件
-   * 安装`/yolov11`文件夹下的`Yolo-Plugins.apk`。
-
-5. 修改配置
-   * 打开`/tmp/`文件夹下的`config.js`文件，按照注释根据自己的情况修改配置项。
-6. 给权限
+2. 给权限
    * 给予autojs6各种权限（悬浮窗、显示在其它应用上层、后台弹出界面、通知、截图、投影媒体权限等）autojs6侧边栏尽量全部给予。
+3. 下载`main.js`文件并运行 
+   * 运行`main.js`文件，脚本会自动检查更新并下载所需文件。
+4. 修改配置
+   * 打开`/tmp/`文件夹下的`config.js`文件，按照注释根据自己的情况修改配置项。
 
-7. 运行`main.js`以开始自动化，首次运行请关注运行状态。
+5. 再次运行`main.js`以开始自动化，首次运行请关注运行状态。
   
 ### 文件说明
 ```
 /
 ├── tmp/                 # 临时文件目录
 │   ├── config.js        # 配置文件
+│   ├── mergeConfigs.js  # 配置合并器
 │   ├── level.txt        # 成长值记录文件
 │   └── pic.png          # 验证码图片
 ├── yolov11/            
@@ -50,9 +43,11 @@
 │   │   ├── yzm.bin
 │   │   └── yzm.param
 │   ├── Yolo-Plugins.apk # Yolo插件
-│   └── yolov11.js       
+│   └── yolov11.js       # YOLOv11 模块
 ├── main.js              # 主程序文件
 ├── updater.js           # 更新器脚本
+├── pushToWechat.js      # 微信推送脚本
+├── version.json         # 版本信息文件
 └── README.md            # 说明文档
 ```
 
@@ -78,8 +73,15 @@
 * 如果你担心使用自动化脚本签到会导致被检测拉黑，请不要使用此脚本。
 
 ## **更新日志**
-### V3.6 (250517) 
+### V3.7 (250518) 
  > 1. `新增` 支持全量更新，首次只需下载运行`main.js`运行即可下载其它文件。
+ > 2. `新增` 支持将结果推送至微信
+   * 需要在`config.js`中配置`微信推送`选项。
+   * 并且填写对应的`ServerChan`或`PushPlus`的Token。
+   * 目前支持通过`ServerChan`和`PushPlus`推送消息到微信。
+   * 点击[ServerChan](https://sct.ftqq.com/)或[PushPlus](https://pushplus.hxtrip.com/)注册获取Token。
+
+
 ### V3.5 (250516) 
  > 1. `优化` 代理和版本信息只请求一次，脚本之间本地共享。
  > 2. `新增` config文件更新时，新旧文件自动合并。

@@ -1,5 +1,5 @@
 /**
- * @version 20250517
+ * @version 20250518
  * @description 更新器脚本
  *               自动检查更新并下载更新文件。
  */
@@ -32,6 +32,8 @@ function getLocalVersion(relativePath) {
     if (!files.exists(localPath)) {
         return 0; // 文件不存在，视为版本0
     }
+    let ext = files.getExtension(relativePath);
+    if (ext != "js") return 23333333
     try {
         let content = files.read(localPath);
         let match = content.match(/\*\s*@version\s+(\d{8})/);
@@ -64,7 +66,7 @@ function compareVersions(localVersion, serverVersion) {
 
 
 function downloadFile(scriptPathInRepo, localFullPath) {
-    var downloadUrl = proxy + "https://github.com/fgvsuiye/autojs6/blob/main/" + scriptPathInRepo + "?timestamp=" + new Date().getTime();
+    var downloadUrl = proxy + "https://github.com/fgvsuiye/autojs6/blob/main/" + scriptPathInRepo
     try {
         let res = http.get(downloadUrl);
         if (res.statusCode == 200) {
@@ -98,7 +100,7 @@ function performUpdates() {
     var configPath = "/tmp/config.js"; // 相对于项目根目录的路径
     var updatesPerformedCount = 0;
     try {
-        
+
         for (let scriptPathInRepo in remoteVersionsData) {
             let remoteVersion = remoteVersionsData[scriptPathInRepo];
             if (typeof remoteVersion !== "number") continue; // 跳过非数字项

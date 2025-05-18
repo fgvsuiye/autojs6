@@ -1,8 +1,8 @@
 /**
- * @version 20250517
+ * @version 20250518
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
- * 修改：    风中拾叶
+ * 修改：    风中拾叶   
 */
 
 try {
@@ -33,11 +33,10 @@ var dheight = device.height;
 var todayDate = formatDate(new Date());
 var startTime = new Date().getTime(); // 用于脚本总超时计时
 var yoloProcessor = null; // 初始化为 null
-var lx, ly, isFullUpdate
+var lx, ly, isFullUpdate, proxy, remoteVersionsData, pushContent
 var needsUpdate = false; // 是否需要更新
 var updateDate = storages.create("updateDate");
 var today = parseInt(todayDate.replace(/-/g, ''));
-var proxy, remoteVersionsData;
 
 // 定义是否全量更新的变量
 
@@ -677,7 +676,15 @@ function recordLevel() {
             let todayStr = todayDate.replace(/-/g, "/"); // 匹配页面格式
             let detailsFound = false;
             let totalPoints = 0;
+            let lines = []
+            lines.push("## 任务报告\n" +
+                  "* 状态：成功\n" +
+                  "* 详情：所有子任务均已完成。\n" +
+                  "* 时间：" + new Date().toLocaleString() + "\n" +
+                  "> 来自 Auto.js 脚本推送\n"); // Markdown 格式
 
+            lines.push("| 任务名称 | 数值 |");
+            lines.push("|---|---|");
             // 查找今日明细
             let todayItems = className("android.widget.TextView").textContains(todayStr).find();
             if (todayItems.nonEmpty()) {
@@ -688,6 +695,7 @@ function recordLevel() {
                         let taskName = item.previousSibling().text(); // 任务名称
                         let pointsText = item.nextSibling().text(); // 分值
                         let points = parseInt(pointsText.replace('+', ''));
+                        lines.push(`| ${taskName} | ${pointsText} |`);
                         if (!isNaN(points)) {
                             log(`${(taskName+'：').padEnd(17, '▒')}${pointsText.padStart(5, '')}`);
                             totalPoints += points;
@@ -698,20 +706,34 @@ function recordLevel() {
                 });
                 
                 log(`今日总计：`.padEnd(17, '▒') + `+${totalPoints}`.padStart(5, ''));
+                lines.push(`| 今日总计 | ${totalPoints} |`);
             } else {
                 log("未找到今日成长值明细");
             }
             // 查找当前总成长值
             let currentLevelText = className("android.widget.TextView").textContains("成长值").depth(13).indexInParent(1).findOne(SHORT_TIMEOUT);
-            if (currentLevelText) {
+            let level = className("android.widget.TextView").textContains("段").find();
+            if (currentLevelText && level.nonEmpty()) {
                 // 尝试提取数字部分
-                let match = currentLevelText.text().match(/(\d+)\//);
+                let match = currentLevelText.text().split(" ");
+                var levelText 
+                level.forEach(function (item) {
+                    centerx = item.centerX()
+                    if (centerx > dwidth * 0.4 && centerx < dwidth * 0.6) {
+                        levelText =  item.text();
+                    }
+                });
                 if (match && match[1]) {
                      let currentTotal = parseInt(match[1]);
                      log(`当前成长值：`.padEnd(17, '▒') + `${currentTotal}`.padStart(5, ''));
+                     log(`当前等级：`.padEnd(17, '▒') + `${levelText}`.padStart(5, ''));
+                     log(`距下一段还需：`.padEnd(17, '▒') + `${match[1].split("/")[1] - currentTotal}`.padStart(5, ''));
+                     lines.push(`| 当前成长值 | ${currentTotal} |`);
+                     lines.push(`| 当前等级 | ${levelText} |`);
+                     lines.push(`| 距下一段还需 | ${match[1].split("/")[1] - currentTotal} |`);
                      // 记录到文件
                      try {
-                         files.append(LEVEL_RECORD_PATH, `\n${todayDate}：+${totalPoints.padEnd(5, " ")} 当前总计：${currentTotal}`);
+                         files.append(LEVEL_RECORD_PATH, `\n${todayDate}：今日：+${totalPoints.padEnd(5, " ")} 当前 ${levelText} 总计：${match[1]}`);
                          log(`成长值已记录到 ${LEVEL_RECORD_PATH}`);
                      } catch (eFile) {
                          console.error(`写入成长值记录文件失败: ${eFile}`);
@@ -722,6 +744,7 @@ function recordLevel() {
             } else {
                 log("未找到包含 '当前成长值' 的文本");
             }
+            pushContent = lines.join("\n");
             log("----------------------");
             back(); // 返回签到页
         } else {
@@ -1174,9 +1197,26 @@ function main() {
         // if (config.米粉节) fansActivity(); // 
         if (config.观看视频) watchVideoTask();
         if (config.双旗舰) dualFlagshipActivity(); //
-        if (config.感恩季) thanksgivingActivity(); // 
-        if (isInSignPage() && config.成长值记录) {
+        if (config.感恩季) thanksgivingActivity(); //
+        if (isInSignPage()) {
             recordLevel();
+        }
+        // 推送
+        if (config.推送至微信 != 1 && config.推送至微信 != 2) {
+            log("未配置推送");
+        }else{
+            log("开始推送");
+            let title = "小米社区签到任务完成";
+            let channel, token;
+            if (config.推送至微信 == 1) {
+                channel = "serverChan";
+                token = config.serverChanToken;
+            }else if (config.推送至微信 == 2) {
+                channel = "pushPlus";
+                token = config.pushPlusToken;
+            }
+            console.log("推送渠道: " + channel);
+            require("./pushToWechat.js")(channel, token, title, pushContent);
         }
         log("所有配置的任务已执行完毕");
     } catch (e) {

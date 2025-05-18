@@ -1,5 +1,5 @@
 /**
- * @version 20250514
+ * @version 20250518
  * 小米社区签到脚本配置文件 
  */
 
@@ -28,6 +28,10 @@ var config = {
     拔萝卜: 1,
     检查更新: 1,
     更新间隔: 3, // 单位：天
+    推送至微信 : 2, // 1 = 通过 ServerChan 推送消息到微信, 2 = 通过 PushPlus 推送消息到微信, 其它 = 不推送
+    serverChanToken : "", // ServerChan Token (推送至微信 = 1 时必填)
+    pushPlusToken : "",   // PushPlus Token (推送至微信 = 2 时必填)
+
 
     // 其他配置
     confThreshold : 0.7,                    // 最低置信度
