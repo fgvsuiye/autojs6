@@ -74,7 +74,7 @@ function downloadFile(scriptPathInRepo, localFullPath) {
             files.ensureDir(localFullPath);
             // 下载到临时文件，成功后再重命名，防止更新中断导致文件损坏
             let tempPath = localFullPath + ".tmp";
-            files.write(tempPath, res.body.string());
+            files.writeBytes(tempPath, res.body.bytes());
             if (files.exists(tempPath)) { // 简单校验
                 fileName = files.getName(localFullPath);
                 files.rename(tempPath, fileName) ; // 覆盖原文件
