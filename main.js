@@ -1,5 +1,5 @@
 /**
- * @version 20250518
+ * @version 20250521
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶   
@@ -984,6 +984,8 @@ function webTest(urllist) {
  * @returns {string | number} 版本号, 格式为 yyyymmdd 或 0 
  */
 function getLocalVersion(relativePath) {
+    let ext = files.getExtension(relativePath);
+    if (ext != "js") return 23333333
     let localPath = files.join(files.cwd(), relativePath);
     if (!files.exists(localPath)) {
         return 0; // 文件不存在，视为版本0
