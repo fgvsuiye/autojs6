@@ -1,94 +1,75 @@
-name: Create Release with Changelog
+name: Auto Release
 
 on:
   push:
     branches:
-      - main # 确保这是你的主分支名称，可能是 master
+      - main
 
 jobs:
-  build_and_release:
-    name: Build, Package and Release
+  create-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 必须有此权限才能创建 Release 和上传附件
+      contents: write
 
     steps:
-      # 1. 检出代码
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-      # 2. 准备要发布的特定文件 main.js (假设它在根目录)
-      # 如果 main.js 是构建产物，你需要在此之前添加构建步骤
+      - name: Get current date
+        id: date
+        run: echo "tag_date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
 
-      # 3. 从 README.md 提取最新更新日志
-      - name: Extract Latest Changelog from README.md
+      - name: Get Short SHA
+        id: short_sha
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Extract latest changelog
         id: changelog_extractor
         run: |
-          LATEST_LOGS=$(awk '
-            /^## (更新日志|Changelog)/ { in_changelog_section = 1; next }
-            in_changelog_section && /^### V/ {
-              if (found_latest_header) exit;
-              found_latest_header = 1;
-              version_header = $0;
-              in_version_block = 1;
-              next;
-            }
-            in_changelog_section && in_version_block && /^>/ {
-              if (logs_content == "") {
-                logs_content = version_header "\n" $0;
-              } else {
-                logs_content = logs_content "\n" $0;
+          # awk 逻辑:
+          # 1. 当遇到以 "### V" + 数字 开头的行 (版本标题):
+          #    a. 如果 'in_block' 标志已经为 true (意味着我们已在处理上一个版本块，现在遇到了新的版本块)，则立即退出 awk。
+          #    b. 否则，设置 'in_block' 标志为 true，表示我们开始进入最新的日志块。
+          # 2. 如果 'in_block' 标志为 true (即我们在最新的日志块内)，则打印当前行。
+          LATEST_CHANGELOG=$(awk '
+            /^### V[0-9]/ {
+              if (in_block) {
+                exit
               }
-              next;
+              in_block = 1
             }
-            in_changelog_section && in_version_block && !/^>/ {
-              if (logs_content != "") exit;
-            }
-            in_changelog_section && (found_latest_header || in_version_block) && (/^## / || /^### /) {
-              if (logs_content != "") exit;
+            in_block {
+              print
             }
           ' README.md)
 
-          if [ -z "$LATEST_LOGS" ]; then
-            LATEST_LOGS="自动提取更新日志失败。请检查 README.md 中的格式或手动更新 Release 描述。"
-          fi
-
-          LATEST_LOGS="${LATEST_LOGS//'%'/'%25'}"
-          LATEST_LOGS="${LATEST_LOGS//$'\n'/'%0A'}"
-          LATEST_LOGS="${LATEST_LOGS//$'\r'/'%0D'}"
-
-          echo "body_content=$LATEST_LOGS" >> "$GITHUB_OUTPUT"
+          # 将多行内容安全地设置为输出变量
+          echo "changelog_text<<EOF" >> $GITHUB_OUTPUT
+          echo "$LATEST_CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
         shell: bash
 
-      # 4. 创建整个项目的 ZIP 压缩包
-      - name: Create project archive
-        run: zip -r project-archive.zip . -x ".git/*" -x ".github/*"
-
-      # 5. 生成 Release 的动态值 (标签名和标题)
-      - name: Generate release values
-        id: release_values # 给这个步骤一个 id
+      - name: Create project ZIP
         run: |
-          echo "TAG_NAME=release-$(date +'%Y%m%d-%H%M%S')" >> "$GITHUB_OUTPUT"
-          echo "RELEASE_TITLE=V$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
-        shell: bash
+          zip -r project_${{ steps.date.outputs.tag_date }}_${{ steps.short_sha.outputs.sha }}.zip . -x ".git/*" -x ".github/*"
 
-      # 6. 创建 GitHub Release 并上传文件
-      - name: Create GitHub Release
-        id: create_release
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          # 使用上一步生成的输出作为 tag_name 和 name
-          tag_name: ${{ steps.release_values.outputs.TAG_NAME }}
-          name: ${{ steps.release_values.outputs.RELEASE_TITLE }}
-
-          # Release 的描述内容，从提取步骤获取
-          body: ${{ steps.changelog_extractor.outputs.body_content }}
-
-          # draft: false
-          # prerelease: false
-
+          tag_name: v${{ steps.date.outputs.tag_date }}-${{ steps.short_sha.outputs.sha }}
+          name: Release ${{ steps.date.outputs.tag_date }}-${{ steps.short_sha.outputs.sha }}
+          body: |
+            使用说明:
+              完整的脚本文件有两种方法下载至本地
+              - 方法1: 下载项目 ZIP 文件，解压至工作目录即可。
+              - 方法2: 只下载`main.js`后运行（首次运行会自动下载更新脚本）。
+            ${{ steps.changelog_extractor.outputs.changelog_text }}
           files: |
+            project_${{ steps.date.outputs.tag_date }}_${{ steps.short_sha.outputs.sha }}.zip
             main.js
-            project-archive.zip
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
