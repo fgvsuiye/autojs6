@@ -19,39 +19,31 @@ jobs:
 
       # 2. 准备要发布的特定文件 main.js (假设它在根目录)
       # 如果 main.js 是构建产物，你需要在此之前添加构建步骤
-      # 例如：
-      # - name: Build main.js (if needed)
-      #   run: npm run build # 或者你的构建命令
 
       # 3. 从 README.md 提取最新更新日志
       - name: Extract Latest Changelog from README.md
-        id: changelog_extractor # 给这个步骤一个id，方便后续引用其输出
+        id: changelog_extractor
         run: |
-          # 适配你的 README.md 更新日志格式
-          # 1. 找到 "## 更新日志" 或 "## Changelog" 标题
-          # 2. 在此之后，找到第一个以 "### V" 开头的行 (版本号标题)
-          # 3. 提取该行以及后续所有以 ">" 开头的行，直到遇到下一个非 ">" 行或下一个 "###" 或 "##" 标题
           LATEST_LOGS=$(awk '
             /^## (更新日志|Changelog)/ { in_changelog_section = 1; next }
-            in_changelog_section && /^### V/ { # 匹配 "### V" 开头的行
-              if (found_latest_header) exit; # 如果已经找到过一个版本，则退出
+            in_changelog_section && /^### V/ {
+              if (found_latest_header) exit;
               found_latest_header = 1;
-              version_header = $0; # 保存版本标题行
-              in_version_block = 1; # 进入版本日志块
+              version_header = $0;
+              in_version_block = 1;
               next;
             }
-            in_changelog_section && in_version_block && /^>/ { # 匹配以 ">" 开头的日志内容行
+            in_changelog_section && in_version_block && /^>/ {
               if (logs_content == "") {
-                logs_content = version_header "\n" $0; # 首次添加版本标题和当前行
+                logs_content = version_header "\n" $0;
               } else {
-                logs_content = logs_content "\n" $0; # 追加日志内容
+                logs_content = logs_content "\n" $0;
               }
               next;
             }
-            in_changelog_section && in_version_block && !/^>/ { # 如果在版本日志块但当前行不是以 ">" 开头
-              if (logs_content != "") exit; # 如果已经收集到内容，则退出
+            in_changelog_section && in_version_block && !/^>/ {
+              if (logs_content != "") exit;
             }
-            # 如果遇到下一个主要标题或次要标题，并且已经开始收集日志，则退出
             in_changelog_section && (found_latest_header || in_version_block) && (/^## / || /^### /) {
               if (logs_content != "") exit;
             }
@@ -61,8 +53,6 @@ jobs:
             LATEST_LOGS="自动提取更新日志失败。请检查 README.md 中的格式或手动更新 Release 描述。"
           fi
 
-          # GitHub Actions 处理多行字符串输出的推荐方式
-          # 将换行符等特殊字符进行转义，以便正确设置为输出变量
           LATEST_LOGS="${LATEST_LOGS//'%'/'%25'}"
           LATEST_LOGS="${LATEST_LOGS//$'\n'/'%0A'}"
           LATEST_LOGS="${LATEST_LOGS//$'\r'/'%0D'}"
@@ -74,24 +64,29 @@ jobs:
       - name: Create project archive
         run: zip -r project-archive.zip . -x ".git/*" -x ".github/*"
 
-      # 5. 创建 GitHub Release 并上传文件
+      # 5. 生成 Release 的动态值 (标签名和标题)
+      - name: Generate release values
+        id: release_values # 给这个步骤一个 id
+        run: |
+          echo "TAG_NAME=release-$(date +'%Y%m%d-%H%M%S')" >> "$GITHUB_OUTPUT"
+          echo "RELEASE_TITLE=V$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      # 6. 创建 GitHub Release 并上传文件
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          # Release 的标签名，这里使用日期和时间生成一个唯一的标签
-          tag_name: "release-$(date +'%Y%m%d-%H%M%S')"
+          # 使用上一步生成的输出作为 tag_name 和 name
+          tag_name: ${{ steps.release_values.outputs.TAG_NAME }}
+          name: ${{ steps.release_values.outputs.RELEASE_TITLE }}
 
-          # Release 的标题，格式为 VYYYYMMDD
-          name: "V$(date +'%Y%m%d')"
-
-          # Release 的描述内容，从上一步提取
+          # Release 的描述内容，从提取步骤获取
           body: ${{ steps.changelog_extractor.outputs.body_content }}
 
-          # draft: false # 设置为 true 则创建为草稿 Release
-          # prerelease: false # 设置为 true 则标记为预发布版
+          # draft: false
+          # prerelease: false
 
-          # 要上传的文件列表
           files: |
             main.js
             project-archive.zip
