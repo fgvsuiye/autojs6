@@ -1,5 +1,5 @@
 /**
- * @version 20250521
+ * @version 20250522
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶   
@@ -455,7 +455,7 @@ function handleNewSign() {
             } else {
                 log("提交后未检测到 '已签到'，可能失败，尝试刷新");
                 click("刷新验证")
-             .  sleep(1500); // 等待刷新
+                sleep(1500); // 等待刷新
             }
         } else {
             log("YOLO 未识别到目标或识别失败，尝试刷新验证码");
