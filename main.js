@@ -669,22 +669,41 @@ function watchVideoTask() {
 function recordLevel() {
     console.info(">>>>>>>---| 积分记录 |---<<<<<<<");
     try {
+        let dailyTask = pickup(text("每日任务"),'indexInParent');
+        let newbieTask = pickup(text('新手任务'),'indexInParent');
+        let totalTask; // 社区总任务数
+
+        let continuousSign = pickup(textMatch(/已连续签到 (\d{1,4}) 天/),'text');
+        let days = continuousSign ? continuousSign.split(" ")[1] : "0"; // 连续签到天数
+
+        if(species.isNumber(dailyTask) && species.isNumber(newbieTask)) {
+            totalTask = (newbieTask - dailyTask - 2) / 3;
+            log("每日任务下标"+dailyTask)
+            log("新手任务下标"+newbieTask)
+            log("任务总数"+totalTask)
+            if (Math.floor(totalTask) != totalTask) totalTask = 0;
+        }
+        let taskList = [] // 社区任务列表
+        for(let i = 1; i < totalTask+1; i++){
+            let taskName = pickup(text("新手任务"), `s<${i*3}`,'text')
+            taskList.push(taskName)
+        }
+        taskList.reverse()
         let levelEntry = text("社区成长等级").findOne(DEFAULT_TIMEOUT);
         if (safeClick(levelEntry, "点击 '社区成长等级'")) {
             sleep(2000); // 等待明细页面加载
 
             let todayStr = todayDate.replace(/-/g, "/"); // 匹配页面格式
-            let detailsFound = false;
-            let totalPoints = 0;
-            let lines = []
+            let detailsFound = false; // 是否找到明细
+            let totalPoints = 0; // 总成长值
+            let lines = [] // 输出字符串列表
+            let completedList = [] // 已完成任务列表
             lines.push("## 任务报告\n" +
-                  "* 状态：成功\n" +
-                  "* 详情：所有子任务均已完成。\n" +
                   "* 时间：" + new Date().toLocaleString() + "\n" +
-                  "> 来自 Auto.js 脚本推送\n"); // Markdown 格式
+                  "* 来自 Auto.js 脚本推送\n"); // Markdown 格式
 
-            lines.push("| 任务名称 | 数值 |");
-            lines.push("|---|---|");
+            lines.push("| 任务名称 | 数值 | 状态 |");
+            lines.push("|---|---|---|");
             // 查找今日明细
             let todayItems = className("android.widget.TextView").textContains(todayStr).find();
             if (todayItems.nonEmpty()) {
@@ -695,9 +714,9 @@ function recordLevel() {
                         let taskName = item.previousSibling().text(); // 任务名称
                         let pointsText = item.nextSibling().text(); // 分值
                         let points = parseInt(pointsText.replace('+', ''));
-                        lines.push(`| ${taskName} | ${pointsText} |`);
+                        completedList.push([taskName,pointsText]);
                         if (!isNaN(points)) {
-                            log(`${(taskName+'：').padEnd(17, '▒')}${pointsText.padStart(5, '')}`);
+                            // log(`${(taskName+'：').padEnd(17, '▒')}${pointsText.padStart(5, '')}`);
                             totalPoints += points;
                         }
                     } catch(eInner) {
@@ -705,33 +724,66 @@ function recordLevel() {
                     }
                 });
                 
-                log(`今日总计：`.padEnd(17, '▒') + `+${totalPoints}`.padStart(5, ''));
-                lines.push(`| 今日总计 | ${totalPoints} |`);
+                //log(`今日总计：`.padEnd(17, '▒') + `+${totalPoints}`.padStart(5, ''));
+                //lines.push(`| 今日总计 | ${totalPoints} |`);
             } else {
                 log("未找到今日成长值明细");
             }
-            // 查找当前总成长值
-            let currentLevelText = className("android.widget.TextView").textContains("成长值").depth(13).indexInParent(1).findOne(SHORT_TIMEOUT);
-            let level = className("android.widget.TextView").textContains("段").find();
-            if (currentLevelText && level.nonEmpty()) {
-                // 尝试提取数字部分
-                let match = currentLevelText.text().split(" ");
-                var levelText 
-                level.forEach(function (item) {
-                    centerx = item.centerX()
-                    if (centerx > dwidth * 0.4 && centerx < dwidth * 0.6) {
-                        levelText =  item.text();
+
+
+            for (var i = 0; i < taskList.length; i++) {
+                var originalTaskName = taskList[i]; // taskList中的原始名称
+                var displayedTaskName = originalTaskName; // 默认情况下，显示原始名称
+                var reward = "0";
+                var statusIcon = "❌";
+                var isCompleted = false;
+                // 遍历completedList，检查当前任务是否已完成
+                for (var j = 0; j < completedList.length; j++) {
+                    var completedTaskShortName = completedList[j][0]; // completedList中的名称
+                    var completedTaskReward = completedList[j][1];
+                    // 检查taskList中的任务名称是否 *包含* completedList中的任务名称
+                    if (originalTaskName.includes(completedTaskShortName)) {
+                        displayedTaskName = completedTaskShortName; // 如果包含，则使用completedList中的名称
+                        reward = completedTaskReward;
+                        statusIcon = "✅";
+                        isCompleted = true;
+                        break; // 找到匹配项，无需继续在此任务上查找completedList中的其他项
                     }
-                });
+                }
+                // 构建输出字符串并添加到lines列表
+                var line = "| " + displayedTaskName + " | " + reward + " | " + statusIcon + " |";
+                lines.push(line);
+            }
+            lines.push("-----");
+            lines.push("* 当前信息"); 
+            lines.push("");
+            lines.push("| 项目 | 状态 |");
+            lines.push("|---|---|");
+            lines.push(`| 今日总计 | ${totalPoints} |`);
+            // 查找当前总成长值
+            let currentLevelText = pickup(textMatch(/成长值 (\d{1,5})\/(\d{1,5})/), 'text'); 
+            let levelText = pickup(textContains("段").boundsCenterX(0.4,0.6), 'text')
+            if (currentLevelText && levelText) {
+                // 尝试提取数字部分
+                let match = currentLevelText.split(" ");
                 if (match && match[1]) {
                      let currentTotal = parseInt(match[1]);
-                     log(`当前成长值：`.padEnd(17, '▒') + `${currentTotal}`.padStart(5, ''));
-                     log(`当前等级：`.padEnd(17, '▒') + `${levelText}`.padStart(5, ''));
-                     log(`距下一段还需：`.padEnd(17, '▒') + `${match[1].split("/")[1] - currentTotal}`.padStart(5, ''));
+                     //log(`当前成长值：`.padEnd(17, '▒') + `${currentTotal}`.padStart(5, ''));
+                     //log(`当前等级：`.padEnd(17, '▒') + `${levelText}`.padStart(5, ''));
+                     //log(`距下一段还需：`.padEnd(17, '▒') + `${match[1].split("/")[1] - currentTotal}`.padStart(5, ''));
+                     lines.push(`| 今日任务完成 | ${todayItems.length} / ${totalTask} |`)
+                     lines.push(`| 连续签到天数 | ${days} |`)
                      lines.push(`| 当前成长值 | ${currentTotal} |`);
                      lines.push(`| 当前等级 | ${levelText} |`);
                      lines.push(`| 距下一段还需 | ${match[1].split("/")[1] - currentTotal} |`);
-                     // 记录到文件
+                     lines.push('-----')
+
+                     if(todayItems.length != totalTask){
+                         lines.push("* ⚠️ **注意** 今日有任务未完成，请打开社区检查\n");
+                     }else{
+                         lines.push("* ✅ 所有任务已完成");
+                     }
+
                      try {
                          files.append(LEVEL_RECORD_PATH, `\n${todayDate}：今日：+${totalPoints.padEnd(5, " ")} 当前 ${levelText} 总计：${match[1]}`);
                          log(`成长值已记录到 ${LEVEL_RECORD_PATH}`);
@@ -745,6 +797,7 @@ function recordLevel() {
                 log("未找到包含 '当前成长值' 的文本");
             }
             pushContent = lines.join("\n");
+            console.log("推送内容预览：\n" + pushContent);
             log("----------------------");
             back(); // 返回签到页
         } else {
