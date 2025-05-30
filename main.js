@@ -1,5 +1,5 @@
 /**
- * @version 20250522
+ * @version 20250530
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶   
@@ -498,7 +498,7 @@ function captureVerificationCodeImage() {
                 console.show()
                 if (image) {
                     files.ensureDir(CAPTURE_PIC_PATH); // 确保目录存在
-                    images.save(image, CAPTURE_PIC_PATH, "png", 90); // 保存截图用于模型输入
+                    images.save(image, CAPTURE_PIC_PATH, "jpg", 90); // 保存截图用于模型输入
                     log(`验证码区域截图成功: (${lx},${ly},${wid},${hei})`);
                     return image;
                 } else {
