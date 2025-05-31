@@ -37,6 +37,7 @@ var lx, ly, isFullUpdate, proxy, remoteVersionsData, pushContent
 var needsUpdate = false; // 是否需要更新
 var updateDate = storages.create("updateDate");
 var today = parseInt(todayDate.replace(/-/g, ''));
+var signSuccess = false;
 
 // 定义是否全量更新的变量
 
@@ -416,8 +417,6 @@ function handleNewSign() {
         log("YOLO 模块未加载，无法进行验证码识别签到");
         return false; // 表示签到失败
     }
-
-    let signSuccess = false;
     for (let i = 0; i < RETRY_TIMES; i++) {
         log(`开始第 ${i + 1} 次签到尝试`);
 
@@ -546,6 +545,7 @@ function performSign() {
         let alreadySigned = textContains("已签到").findOne(SHORT_TIMEOUT);
         if (alreadySigned) {
             log("今日已签到");
+            signSuccess = true;
             return true; // 返回签到状态
         }
 
@@ -675,9 +675,10 @@ function recordLevel() {
 
         let continuousSign = pickup(textMatch(/已连续签到 (\d{1,4}) 天/),'text');
         let days = continuousSign ? continuousSign.split(" ")[1] : "0"; // 连续签到天数
-
+        let index;
+        signSuccess ? index = 2 : index = 1;
         if(species.isNumber(dailyTask) && species.isNumber(newbieTask)) {
-            totalTask = (newbieTask - dailyTask - 2) / 3;
+            totalTask = (newbieTask - dailyTask - index) / 3;
             log("每日任务下标"+dailyTask)
             log("新手任务下标"+newbieTask)
             log("任务总数"+totalTask)
