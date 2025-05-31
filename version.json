@@ -7,7 +7,7 @@
   "yolov11/model/yzm.param": 20250518,
   "pushToWechat.js": 20250518,
   "updater.js": 20250521,
-  "main.js": 20250530,
+  "main.js": 20250531,
   "tmp/mergeConfigs.js": 20250516,
   "updateKeys": ["小程序签到", "浏览帖子", "加入圈子", "观看视频", "米粉节", "感恩季", "双旗舰", "拔萝卜", "推送至微信", "serverChanToken", "pushPlusToken"]
 }
