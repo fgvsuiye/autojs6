@@ -1,13 +1,13 @@
 
 {
   "tmp/config.js": 20250518,
-  "yolov11/yolov11.js": 20250514,
+  "yolov11/yolov11.js": 20250602,
   "yolov11/Yolo-plugins.apk": 20250514,
   "yolov11/model/yzm.bin": 20250518,
   "yolov11/model/yzm.param": 20250518,
   "pushToWechat.js": 20250518,
   "updater.js": 20250521,
-  "main.js": 20250531,
+  "main.js": 20250602,
   "tmp/mergeConfigs.js": 20250516,
   "updateKeys": ["小程序签到", "浏览帖子", "加入圈子", "观看视频", "米粉节", "感恩季", "双旗舰", "拔萝卜", "推送至微信", "serverChanToken", "pushPlusToken"]
 }

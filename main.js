@@ -1,5 +1,5 @@
 /**
- * @version 20250531
+ * @version 20250602
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶   
@@ -17,7 +17,6 @@ try {
     main();
 }
 importClass(android.content.Context);
-
 // --- 常量定义 ---
 const APP_PACKAGE_NAME = config.packageName;      // 小米社区包名
 const YOLO_MODULE_PATH = config.yoloModelPath;    // YOLOv11 模块路径
@@ -61,6 +60,8 @@ try {
     log("YOLO 处理模块加载成功");
 } catch (e) {
     console.error(`加载 YOLO 处理模块失败: ${e}`);
+    console.error("将会跳过签到环节，请检查配置是否正确。");
+    yoloProcessor = null; // 确保在加载失败时设置为 null
 }
 
 // --- 启动脚本运行超时监控 ---
@@ -985,6 +986,7 @@ function skipAd() {
     }
 }
 
+
 function setProxys() {
     github = "https://github.com/fgvsuiye/autojs6/blob/main/version.json"
     proxys = [
@@ -1242,8 +1244,9 @@ function main() {
             exit();
         }
 
-        // 4. 执行签到
-        let signedIn = performSign();
+        // 4. 执行签到任务
+
+        if (yoloProcessor) performSign(); 
         // 如果签到失败，可以考虑是否继续执行其他任务
         
         // 5. 根据配置执行可选任务
