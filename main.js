@@ -1,5 +1,5 @@
 /**
- * @version 20250602
+ * @version 20250612
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶   
@@ -670,36 +670,27 @@ function watchVideoTask() {
 function recordLevel() {
     console.info(">>>>>>>---| 积分记录 |---<<<<<<<");
     try {
-        let dailyTask = pickup(text("每日任务"),'indexInParent');
-        let newbieTask = pickup(text('新手任务'),'indexInParent');
-        let totalTask; // 社区总任务数
-
         let continuousSign = pickup(textMatch(/已连续签到 (\d{1,4}) 天/),'text');
         let days = continuousSign ? continuousSign.split(" ")[1] : "0"; // 连续签到天数
-        let index;
-        signSuccess ? index = 2 : index = 1;
-        if(species.isNumber(dailyTask) && species.isNumber(newbieTask)) {
-            totalTask = (newbieTask - dailyTask - index) / 3;
-            log("每日任务下标"+dailyTask)
-            log("新手任务下标"+newbieTask)
-            log("任务总数"+totalTask)
-            if (Math.floor(totalTask) != totalTask) totalTask = 0;
-        }
-        let taskList = [] // 社区任务列表
-        for(let i = 1; i < totalTask+1; i++){
-            let taskName = pickup(text("新手任务"), `s<${i*3}`,'text')
-            taskList.push(taskName)
-        }
-        taskList.reverse()
+        let allTexts = className("android.widget.TextView").find();
+        let dailyIndex = pickup(text("每日任务"),'indexInParent');
+        let newbieIndex = pickup(text('新手任务'),'indexInParent');
+        let dailyLeft = pickup(text("每日任务"), "boundsLeft");
+        let taskCount = allTexts.filter(item => {
+            let index = item.indexInParent();
+            return index > dailyIndex && index < newbieIndex && detect(item, "boundsLeft") === dailyLeft;
+        });
+        let finalList = taskCount.filter((item, index) => index % 2 === 0);
+        let taskList = finalList.map(item => item.text())
         let levelEntry = text("社区成长等级").findOne(DEFAULT_TIMEOUT);
         if (safeClick(levelEntry, "点击 '社区成长等级'")) {
             sleep(2000); // 等待明细页面加载
-
             let todayStr = todayDate.replace(/-/g, "/"); // 匹配页面格式
             let detailsFound = false; // 是否找到明细
             let totalPoints = 0; // 总成长值
             let lines = [] // 输出字符串列表
             let completedList = [] // 已完成任务列表
+            let count = 0; // 计数器
             lines.push("## 任务报告\n" +
                   "* 时间：" + new Date().toLocaleString() + "\n" +
                   "* 来自 Auto.js 脚本推送\n"); // Markdown 格式
@@ -714,8 +705,16 @@ function recordLevel() {
                 todayItems.forEach(item => {
                     try {
                         let taskName = item.previousSibling().text(); // 任务名称
+                        if (taskName.includes("15周年")) taskName = "15周年"; // 特殊任务名称处理
                         let pointsText = item.nextSibling().text(); // 分值
                         let points = parseInt(pointsText.replace('+', ''));
+                        // 检查任务名称是否已存在于 completedList，如果存在则将分值累加。
+                        completedList.forEach(completed => {
+                            if (completed[0] === taskName) {
+                                pointsText = parseInt(completed[1]) + points; 
+                                completed[1] = pointsText; 
+                            }
+                        });
                         completedList.push([taskName,pointsText]);
                         if (!isNaN(points)) {
                             // log(`${(taskName+'：').padEnd(17, '▒')}${pointsText.padStart(5, '')}`);
@@ -738,7 +737,6 @@ function recordLevel() {
                 var displayedTaskName = originalTaskName; // 默认情况下，显示原始名称
                 var reward = "0";
                 var statusIcon = "❌";
-                var isCompleted = false;
                 // 遍历completedList，检查当前任务是否已完成
                 for (var j = 0; j < completedList.length; j++) {
                     var completedTaskShortName = completedList[j][0]; // completedList中的名称
@@ -748,7 +746,7 @@ function recordLevel() {
                         displayedTaskName = completedTaskShortName; // 如果包含，则使用completedList中的名称
                         reward = completedTaskReward;
                         statusIcon = "✅";
-                        isCompleted = true;
+                        count++; 
                         break; // 找到匹配项，无需继续在此任务上查找completedList中的其他项
                     }
                 }
@@ -770,17 +768,14 @@ function recordLevel() {
                 let match = currentLevelText.split(" ");
                 if (match && match[1]) {
                      let currentTotal = parseInt(match[1]);
-                     //log(`当前成长值：`.padEnd(17, '▒') + `${currentTotal}`.padStart(5, ''));
-                     //log(`当前等级：`.padEnd(17, '▒') + `${levelText}`.padStart(5, ''));
-                     //log(`距下一段还需：`.padEnd(17, '▒') + `${match[1].split("/")[1] - currentTotal}`.padStart(5, ''));
-                     lines.push(`| 今日任务完成 | ${todayItems.length} / ${totalTask} |`)
+                     lines.push(`| 今日任务完成 | ${count} / ${taskList.length} |`)
                      lines.push(`| 连续签到天数 | ${days} |`)
                      lines.push(`| 当前成长值 | ${currentTotal} |`);
                      lines.push(`| 当前等级 | ${levelText} |`);
                      lines.push(`| 距下一段还需 | ${match[1].split("/")[1] - currentTotal} |`);
                      lines.push('-----')
 
-                     if(todayItems.length != totalTask){
+                     if(count != taskList.length){
                          lines.push("* ⚠️ **注意** 今日有任务未完成，请打开社区检查\n");
                      }else{
                          lines.push("* ✅ 所有任务已完成");
@@ -852,8 +847,21 @@ function dualFlagshipActivity() {
 function thanksgivingActivity(){
     console.info(">>>>>>>---| 感恩活动 |---<<<<<<<")
     try {
-        let qucanyu = className("android.widget.Button").text("去参与").findOne(3000)
+        // 是否为首次参与
+        let qucanyu = className("android.widget.Button").text("去参加").findOne(3000)
         if(safeClick(qucanyu, "点击 '去参与' (感恩季)")){
+            let isFirstParticipation = storages.create("isFirstParticipation");
+            if (isFirstParticipation.get("isFirstParticipation") !== true) {
+                let btn1 = className("android.widget.Button").text("立即报名").findOne(3000);
+                if (btn1) {
+                    detect(btn1, 's>1', 'click')
+                    sleep(300);
+                    safeClick(btn1, "点击 '立即报名'");
+                    sleep(300);
+                    pickup(textContains("确定"), "click");
+                    isFirstParticipation.put("isFirstParticipation", true);
+                }
+            }
             sleep(1000)
             解锁()
             sleep(1000)
@@ -867,13 +875,12 @@ function thanksgivingActivity(){
         back(); // 尝试返回
     }
 }
-
 /**
  * 解锁
  */
 function 解锁() {
     let jpso = className('TextView').text('可解锁').find()
-    let count = className("android.widget.Button").text("去提升").findOne(3000).parent().child(1).text()
+    let count = pickup(text("去提升"), "p1c1", "text");
     if (jpso.size() > 0 && count > 0) {
         for (i = 0; i < jpso.size(); i++) {
             var control = jpso.get(i);
@@ -884,10 +891,7 @@ function 解锁() {
             safeClick(control, "点击解锁");
             log("第" + (i+1) + "次解锁");
             sleep(1000)
-            let closeButton = indexInParent(1).childCount(1).depth(16).find()
-            if(closeButton.length == 1){
-                safeClick(closeButton.get(0), "关闭解锁提示");
-            }
+            pickup(text("炫耀一下"), "p1s>1", "click");
             sleep(1000)
             if(text("可获得1次解锁机会").exists() || i >= 10 || text("等待解锁").exists()){
                 log("解锁次数不足")
