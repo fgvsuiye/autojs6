@@ -1,5 +1,5 @@
 /**
- * @version 20250612
+ * @version 20251107
  * 小米社区签到脚本配置文件 
  */
 
@@ -26,22 +26,11 @@ var config = {
     感恩季: 1,
     双旗舰: 1,
     拔萝卜: 1,
-    检查更新: 1,
-    更新间隔: 3, // 单位：天
-    推送至微信 : 2, // 1 = 通过 ServerChan 推送消息到微信, 2 = 通过 PushPlus 推送消息到微信, 其它 = 不推送
+    推送至微信 : 1, // 1 = 通过 ServerChan 推送消息到微信, 2 = 通过 PushPlus 推送消息到微信, 其它 = 不推送
     serverChanToken : "", // ServerChan Token (推送至微信 = 1 时必填)
     pushPlusToken : "",   // PushPlus Token (推送至微信 = 2 时必填)
 
-
     // 其他配置
-    confThreshold : 0.7,                    // 最低置信度
-    packageName : "com.xiaomi.vipaccount",  // 小米社区包名
-    yoloModelPath : "./yolov11/yolov11.js", // YOLOv11 模块路径
-    capturePicPath : "./tmp/pic.png",       // 验证码截图路径
-    levelRecordPath : "./tmp/level.txt",    // 成长值记录路径
-    defaultTimeout : 5000,                  // 默认查找超时时间 (ms)
-    shortTimeout : 2000,                    // 较短超时时间
-    retryTimes : 3,                         // 主要操作的重试次数
     totaltime: 200                          //脚本运行时长限制(单位: 秒)
 
 };
