@@ -1,8 +1,8 @@
 /**
- * @version 20250602
+ * @version 20251107
  * YOLOv11 调用模块
  */
-var config = require("../tmp/config.js");
+
 // --- 常量定义 ---
 const YOLO_PLUGIN_NAME = "com.circlefork.yolo"; // 插件包名
 const MODEL_SUBDIR = "/yolov11/model";          // 模型文件夹相对于本脚本的路径
@@ -22,7 +22,6 @@ const MODEL_LABELS = ["面条", "牙齿", "喷漆", "戒指", "汉堡", "双串"
         "战斗", "香烟"
     ];         
 // --- 模型参数 ---
-const DEFAULT_CONF_THRESHOLD = config.confThreshold;           // 默认置信度阈值
 const tag = "[YOLO模块] ";
 // --- 模块级变量 (用于存储初始化状态和实例) ---
 let yoloInstance = null;
@@ -165,10 +164,9 @@ function sortAndProcessResults(data) {
 /**
  * @description 对指定路径的图片执行 YOLO 检测并处理结果。
  * @param {string} imagePath - 要检测的图片文件的绝对路径。
- * @param {number} [confThreshold=DEFAULT_CONF_THRESHOLD] - 置信度阈值 (可选)。 
  * @returns {Array<object>|null} - 处理后的检测结果数组，或在失败时返回 null。
  */
-function detectAndProcess(imagePath, confThreshold = DEFAULT_CONF_THRESHOLD,) {
+function detectAndProcess(imagePath) {
     // 检查初始化状态
     if (!isYoloInitialized || !yoloInstance) {
         console.error(tag + " 未初始化或初始化失败，尝试重新初始化...");
@@ -199,10 +197,9 @@ function detectAndProcess(imagePath, confThreshold = DEFAULT_CONF_THRESHOLD,) {
         }
 
         // 执行检测
-        console.log(`${tag} 开始检测 (conf: ${confThreshold})...`);
         // 注意：yolo.detect 可能需要 Bitmap 对象，images.read 返回的是 Image 对象
         // 需要确认 yolo.detect 接受的参数类型，如果是 Bitmap，需要 img.bitmap
-        let rawResults = yoloInstance.detect(img.bitmap, confThreshold, 0.45, 640);
+        let rawResults = yoloInstance.detect(img.bitmap, 0.7, 0.45, 640);
         console.log(`${tag} 检测完成，原始结果数量: ${rawResults ? rawResults.length : 'N/A'}`);
         //log(rawResults)
         // 处理并返回结果

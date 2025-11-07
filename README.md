@@ -1,87 +1,143 @@
+
 <div align="center">
-<h1><a >小米社区自动化脚本</a></h1>
+
+# 小米社区自动化脚本
+<p align="center">
+  一个基于 AutoJs6 的小米社区自动化脚本，旨在简化每日任务，轻松获取成长值。
+  <br />
+  <br />
+  <a href="https://github.com/fgvsuiye/autojs6/releases">下载最新版本</a>
+  ·
+  <a href="#">报告 Bug</a>
+  ·
+  <a href="#">提出新功能</a>
+</p>
+
+[![版本](https://img.shields.io/badge/Version-v3.13-blue.svg)](https://github.com/fgvsuiye/autojs6/releases)
+[![兼容性](https://img.shields.io/badge/AutoJs6-兼容-brightgreen.svg)](https://github.com/SuperMonster003/AutoJs6/releases)
+[![原作者](https://img.shields.io/badge/原作者-@PJxiaoyu-orange.svg)](#)
+[![修改者](https://img.shields.io/badge/修改者-风中拾叶-light.svg)](#)
+
+<!-- GitHub 交互徽章 -->
+[![GitHub Stars](https://img.shields.io/github/stars/fgvsuiye/autojs6?style=social)](https://github.com/fgvsuiye/autojs6/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/fgvsuiye/autojs6?style=social)](https://github.com/fgvsuiye/autojs6/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/fgvsuiye/autojs6)](https://github.com/fgvsuiye/autojs6/issues)
+
+
+<!-- 项目状态徽章 -->
+[![GitHub last commit](https://img.shields.io/github/last-commit/fgvsuiye/autojs6)](https://github.com/fgvsuiye/autojs6/commits/main)
+[![GitHub contributors](https://img.shields.io/github/contributors/fgvsuiye/autojs6)](https://github.com/fgvsuiye/autojs6/graphs/contributors)
+[![GitHub Release Downloads](https://img.shields.io/github/downloads/fgvsuiye/autojs6/total)](https://github.com/fgvsuiye/autojs6/releases)
+
 
 </div>
 
-## 项目介绍
-#### 原作者：  @PJxiaoyu  
-#### 修改： 风中拾叶 
-* 此脚本是基于AutoJs6，依靠安卓无障碍服务的小米社区自动化脚本
-* 支持的功能：
-  * 定时解锁手机（密码，图案）
-  * 浏览帖子
-  * 签到验证码识别
-  * 社区各种成长值任务
-  * 小程序签到
-  * 成长值记录
-  * ......
+---
 
+## 📖 项目介绍
 
+此脚本是基于 **AutoJs6**，并利用安卓的 **无障碍服务** 实现的小米社区自动化操作脚本。它通过模拟真人的点击、滑动等行为，帮助用户自动完成社区内的各种日常任务，从而解放您的双手。
 
-## 使用说明
-1. 下载autojs6
-   * [点击去下载](https://github.com/SuperMonster003/AutoJs6/releases)
-2. 给权限
-   * 给予autojs6各种权限（悬浮窗、显示在其它应用上层、后台弹出界面、通知、截图、投影媒体权限等）autojs6侧边栏尽量全部给予。
-3. 下载完整项目
-   * 两种方法：
-     * 方法1. 下载项目ZIP文件，解压至工作目录即可。
-     * 方法2. 只下载`main.js`后运行（首次运行会自动下载更新脚本）。
-   * [点击去下载](https://github.com/fgvsuiye/autojs6/releases)
-4. 修改配置
-   * 打开`tmp/`文件夹下的`config.js`文件，按照注释根据自己的情况修改配置项。
-5. 安装`Yolo-plugins.apk`插件
-   * 打开`yolov11/`文件夹下的`Yolo-plugins.apk`插件并安装。
-6. 再次运行`main.js`以开始自动化，首次运行请关注运行状态。
-  
-### 文件说明
+**核心功能:**
+*   📱 **自动解锁**: 支持密码或图案解锁，定时唤醒手机执行任务。
+*   📰 **内容浏览**: 自动浏览帖子、完成阅读任务。
+*   ✅ **自动签到**: 集成YOLOv11模型，实现本地化的验证码识别与自动签到。
+*   🚀 **任务中心**: 全面覆盖社区内的各种成长值任务。
+*   ✍️ **数据记录**: 自动记录每日成长值的获取情况。
+*   🔔 **消息推送**: 支持通过 `ServerChan` 和 `PushPlus` 将运行结果推送到微信。
+
+<br>
+
+## ⚠️ 重要声明
+
+> **小米社区解锁资格审查已添加以下内容：**
+>
+> > $\color{red}{是否有使用脚本或其他不当手段在小米社区获取成长值的行为}$
+>
+> 尽管此脚本通过模拟真人操作来降低风险，但任何自动化行为都存在被平台检测到的可能性。
+>
+> **使用此脚本可能会导致您的账户被列入黑名单。请您充分了解相关风险后，自行决定是否使用。您需要自行承担使用本脚本可能带来的一切后果。**
+
+<br>
+
+## 🚀 快速开始
+
+请按照以下步骤完成安装和配置，即可开始您的自动化之旅。
+
+### 1. 环境准备
+- 下载并安装 **AutoJs6**。
+  - [➡️ 前往下载页面](https://github.com/SuperMonster003/AutoJs6/releases)
+- 授予 AutoJs6 必要的权限，如：**无障碍服务**、**悬浮窗**、**后台弹出界面**、**截图**等。建议在 AutoJs6 的侧边栏中开启所有相关权限以避免运行问题。
+
+### 2. 下载项目
+- 下载本项目的最新 ZIP 压缩包，并解压到您的 AutoJs6 工作目录。
+  - [➡️ 点击下载项目](https://github.com/fgvsuiye/autojs6/releases)
+
+### 3. 修改配置
+- 使用文本编辑器打开项目中的 `tmp/config.js` 文件。
+- 仔细阅读文件内的注释，并根据您的个人情况（如解锁密码、推送Token等）修改配置项。
+
+### 4. 安装插件
+- 在解压后的项目中找到 `yolov11/` 文件夹。
+- 安装该文件夹下的 `Yolo-plugins.apk` 插件，这是验证码识别功能的核心。
+
+### 5. 运行脚本
+- 在 AutoJs6 中，运行项目根目录下的 `main.js` 文件。
+- 首次运行请保持手机屏幕常亮，并关注脚本的运行状态，确保一切正常。
+
+<br>
+
+## 📂 文件结构
+
 ```
-/
-├── tmp/                 # 临时文件目录
-│   ├── config.js        # 配置文件
-│   ├── mergeConfigs.js  # 配置合并器
-│   ├── level.txt        # 成长值记录文件
-│   └── pic.png          # 验证码图片
-├── yolov11/            
-│   ├── model/           # 模型文件目录
-│   │   ├── yzm.bin
-│   │   └── yzm.param
-│   ├── Yolo-Plugins.apk # Yolo插件
-│   └── yolov11.js       # YOLOv11 模块
-├── main.js              # 主程序文件
-├── updater.js           # 更新器脚本
-├── pushToWechat.js      # 微信推送脚本
-├── version.json         # 版本信息文件
-└── README.md            # 说明文档
+.
+├── main.js              # 🚀 主程序入口
+├── pushToWechat.js      # 🔔 微信推送模块
+├── README.md            # 📄 项目说明文档
+├── tmp/                 # ⚙️ 临时与配置目录
+│   ├── config.js        #   - 配置文件 (重要)
+│   ├── level.txt        #   - 成长值记录文件
+│   └── pic.png          #   - 验证码截图缓存
+└── yolov11/             # 🧠 YOLO 识别模块
+    ├── model/           #   - 模型文件目录
+    │   ├── yzm.bin
+    │   └── yzm.param
+    ├── Yolo-Plugins.apk #   - YOLO 插件 (必须安装)
+    └── yolov11.js       #   - YOLOv11 功能模块
 ```
 
-## 注意事项
+<br>
 
-* #### 小米社区解锁资格审查添加以下内容：
-  > $\color{red}{是否有使用脚本或其他不当手段在小米社区获取成长值的行为}$
-  * 此限制可能针对调用社区接口的方式来获取成长值，，虽然此脚本依靠无障碍服务模拟真人操作，但是也可能存在被检测的风险。
-  使用此脚本可能会被检测导致进入黑名单。
-* Auto.js需要各种权限，左侧边栏内的权限都打开可解决大部分问题！！
+## ✨ 功能配置
 
-* ~~由于验证码识别为上传至个人服务器识别，所以可能会出现服务器繁忙或无响应导致识别错误~~
-* 部分手机需要打开 `后台弹出界面`  的权限，否则无法自动启动社区
-* 建议自动锁屏时间不低于 20 秒，否则可能自动锁屏导致脚本无法正常运行。
-* #### 自动更新说明
-  * 在配置文件中配置`检查更新`选项，脚本会自动检测脚本更新，若有新版本，则会自动下载更新，
-  * 所有文件自动更新覆盖。
-  * `config.js`文件会自动合并，除了活动开关外，其他配置项会优先保留本地配置。
-* #### 推送至微信说明
-   * 需要在`config.js`中配置`微信推送`选项。
-   * 并且填写对应的`ServerChan`或`PushPlus`的Token。
-   * 目前支持通过`ServerChan`和`PushPlus`推送消息到微信。
-   * 点击[ServerChan](https://sct.ftqq.com/)或[PushPlus](https://pushplus.hxtrip.com/)注册获取Token。 
+### 微信消息推送
 
+如果需要将脚本运行结果推送到微信，请按以下步骤操作：
 
-## 再次说明：
-- 虽然理论上本脚本不会影响社区账户安全，但您需要自行承担使用本脚本的后果
-* 如果你担心使用自动化脚本签到会导致被检测拉黑，请不要使用此脚本。
+1.  在 `config.js` 文件中找到并启用 `微信推送` 选项。
+2.  注册并获取推送服务的 Token：
+    *   **ServerChan**: [点击前往注册](https://sct.ftqq.com/)
+    *   **PushPlus**: [点击前往注册](https://pushplus.hxtrip.com/)
+3.  将获取到的 Token 填入 `config.js` 中对应的配置项。
 
-## 更新日志
+<br>
+
+## 💡 注意事项
+
+*   **权限问题**: 大部分脚本运行失败都是由于 AutoJs6 权限不足。请确保 **无障碍服务**、**后台弹出界面**、**截图** 等权限已正确授予。
+*   **锁屏时间**: 建议将系统的自动锁屏时间设置为 **不低于20秒**，以防脚本在执行长时间任务时因锁屏而中断。
+*   **模型加载**: 如果您的设备在使用 GPU 调用 YOLO 模型时出错，脚本已默认不使用 GPU。若 YOLO 模型初始化失败，签到任务将被自动跳过。
+
+<br>
+
+## 📜 更新日志
+
+<details>
+<summary>点击展开查看历史更新</summary>
+
+### V3.13 (251107)
+ > 1. `优化` 优化成长值记录任务名称识别错误。
+ > 2. `精简` 去除更新，精简日志。
 ### V3.12 (250612)
  > 1. `优化` 感恩季活动上线。
  > 2. `优化` 优化成长值记录。
@@ -182,5 +238,14 @@
  > 6. 修改了浏览帖子正则表达式，使其能匹配（01-01至12-31）日期格式。
  > 7. 优化了代码结构。
  > 8. 优化了退出程序功能（功能执行完毕或定时器结束后都会停止脚本）。
+</details>
 
----
+<br>
+
+## 🙏 致谢
+
+*   **@PJxiaoyu** - 项目的原始作者
+*   **AutoJs6** - 强大的自动化工具
+*   **所有贡献者和用户** - 感谢你们的支持与反馈
+
+```
