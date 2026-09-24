@@ -1,8 +1,11 @@
 /**
- * @version 20251107
+ * @version 20260924
  * 小米社区签到脚本
  * 原作者：  @PJxiaoyu
  * 修改：    风中拾叶   
+ * 更新说明：
+     由于验证码识别难度增加，训练模型变得异常复杂，因此替换为第三方验证码识别服务。
+     ！！！ 注意：验证码识别服务可能需要付费，具体费用请参考服务提供商的定价。
 */
 
 importClass(android.content.Context);
@@ -17,9 +20,9 @@ var dwidth = device.width;                  // 设备宽度
 var dheight = device.height;                // 设备高度
 var todayDate = formatDate(new Date());     // 今日日期字符串 YYYY-MM-DD
 var startTime = new Date().getTime();       // 脚本开始时间戳
-var yoloProcessor = null;                   // 初始化为 null
 var lx, ly, pushContent                     // 验证码截图坐标及推送内容
 var signSuccess = false;                    // 签到成功标志
+var token = config.token;                            // 服务器推送令牌
 
 console.setSize(dwidth, dheight * 0.25)
 console.setPosition(0, 0)
@@ -380,50 +383,35 @@ function browsePosts() {
  * @returns {boolean} 签到是否成功
  */
 function handleNewSign() {
-    try {
-        // 加载 YOLO 模块
-        console.info(">>>>>>>---| 加载模块 |---<<<<<<<");
-        yoloProcessor = require("./yolov11/yolov11.js");
-        if (typeof yoloProcessor !== 'function') {
-            throw new Error(`模块未导出函数`);
-        }
-        log("YOLO 处理模块加载成功");
-    } catch (e) {
-        console.error(`加载 YOLO 处理模块失败: ${e}`);
-        console.error("将会跳过签到环节，请检查配置是否正确。");
-        yoloProcessor = null; // 确保在加载失败时设置为 null
-        return false; // 签到失败
-    }
-
+    var res_data = null;
     for (let i = 0; i < 3; i++) {
         log(`开始第 ${i + 1} 次签到尝试`);
 
         // 1. 截图
-        let capturedImage = captureVerificationCodeImage();
-        if (!capturedImage) {
-            log("截图失败，跳过此次尝试");
-            // 尝试刷新验证码
-            let refreshBtn = textContains("刷新验证").findOne(shortTimeout);
-            safeClick(refreshBtn);
-            sleep(1000);
-            continue;
-        }
-
-        // 2. 调用 YOLO 识别
-        log("调用 YOLO 模型识别...");
-        let detectionResult = null;
+        captureVerificationCodeImage();
+        
+        // 2. 调用验证码服务商API
+        let capturedImage = images.read(capturePicPath);
+        log("调用验证码服务商API...");
         try {
-            detectionResult = yoloProcessor(capturePicPath); // 模型路径
+            let res = http.post("http://api.jfbym.com/api/YmServer/customApi", {
+                'image': images.toBase64(capturedImage),
+                'token': token,
+                'type': 88888,
+            });
+            let html = res.body.string();
+            res_data = html.split('data":"')[1].split('","time')[0];
         } catch (e) {
-            console.error(`YOLO 识别调用出错: ${e}`);
+            log(`验证码服务商API调用出错: ${e}`);   
         } finally {
             capturedImage.recycle(); // 回收截图资源
         }
 
         // 3. 处理识别结果并点击
-        if (detectionResult && detectionResult.length > 0) {
-            log(`识别成功 ${detectionResult.length} 个目标`);
-            clickDetectedItems(detectionResult); // 点击识别出的图标
+        let points = res_data.split('|');
+        if (points && points.length > 0) {
+            log(`识别成功 ${points.length} 个目标`);
+            clickDetectedItems(points); // 点击识别出的图标
             // 检查签到结果
             if (waitFor(() => textContains("已签到").findOne(5000), 2, 1000)) {
                 log("签到成功！");
@@ -454,7 +442,7 @@ function captureVerificationCodeImage() {
     try {
         // 定位验证码区域的边界元素
         let topBoundaryParent = textContains("请在下图依次").findOne(defaultTimeout)?.parent()?.parent();
-        let bottomBoundary = text("确认").findOne(defaultTimeout);
+        let bottomBoundary = desc("确认").findOne(defaultTimeout);
         if (topBoundaryParent && bottomBoundary) {
             let bounds = topBoundaryParent.bounds();
             let bottomBounds = bottomBoundary.bounds();
@@ -477,7 +465,7 @@ function captureVerificationCodeImage() {
                     files.ensureDir(capturePicPath); // 确保目录存在
                     images.save(image, capturePicPath, "jpg", 90); // 保存截图用于模型输入
                     log(`验证码区域截图成功: (${lx},${ly},${wid},${hei})`);
-                    return image;
+                    return;
                 } else {
                     log("裁剪截图失败");
                 }
@@ -495,21 +483,24 @@ function captureVerificationCodeImage() {
 
 /**
  * 根据识别结果点击图标
- * @param {Array<object>} list - YOLO 返回的结果列表 [{centerX, centerY, prob, label}, ...]
+ * @param {String}  - 识别出的目标点坐标组,格式为 x1,y1|x2,y2|...|xn,yn|,其中x,y为坐标值
  */
 
-function clickDetectedItems(list) {
+function clickDetectedItems(points) {
     log("开始按顺序点击识别出的图标");
-    list.forEach(({ centerX, centerY, prob, label }, index) => {
+    for (let i = 0; i < points.length; i++) {
+        let coords = points[i].split(',');
+        let centerX = parseInt(coords[0]);
+        let centerY = parseInt(coords[1]);
         let finalX = centerX + lx;
         let finalY = centerY + ly;
-        log(`点击第 ${index + 1} 个: ${label} (置信度: ${prob.toFixed(2)}) @ (${finalX}, ${finalY})`);
+        log(`点击第 ${i + 1} @ (${finalX}, ${finalY})`);
         // 使用 click 精确点击中心点
         if (!click(finalX, finalY)) {
             console.warn(`点击坐标 (${finalX}, ${finalY}) 可能失败`);
         }
         sleep(random(500, 800)); // 模拟点击间隔 
-    });
+    };
     sleep(2000)
     content("确认").findOne().click(); // 点击确认按钮
     log("图标点击完成");
@@ -528,7 +519,11 @@ function performSign() {
             signSuccess = true;
             return true; // 返回签到状态
         }
-
+        // 检查是否填写token
+        if (!token) {
+            toastLog("请在配置中填写验证码服务商token");
+            return false;
+        }
         let signInButton = text("立即签到").findOne(defaultTimeout);
         if (!signInButton) {
             log("未找到 '立即签到' 按钮");
@@ -582,7 +577,7 @@ function carrotActivity() {
         swipe(dwidth * 0.5, dheight * 0.8, dwidth * 0.5, dheight * 0.4, 500); // 向下滚动查找
         sleep(1000);
 
-        let goButton = text("去看看").findOne(defaultTimeout);
+        let goButton = desc("去看看").findOne(defaultTimeout);
         if (safeClick(goButton, "点击 '去看看' (拔萝卜)")) {
             sleep(1000); // 停留2秒
             log("拔萝卜活动签到（模拟）");
@@ -602,7 +597,7 @@ function carrotActivity() {
 function watchVideoTask() {
     console.info(">>>>>>>---| 视频任务 |---<<<<<<<");
     try {
-        let watchButton = className("android.widget.Button").text("去浏览").findOne(defaultTimeout);
+        let watchButton = className("android.widget.Button").desc("去浏览").findOne(defaultTimeout);
         if (safeClick(watchButton, "点击 '去浏览' (视频)")) {
             log("开始浏览视频");
             let watchStartTime = new Date().getTime();
@@ -810,7 +805,7 @@ function recordLevel() {
 function dualFlagshipActivity() {
     console.info(">>>>>>>---| 旗舰活动 |---<<<<<<<");
     try {
-        let cj = className("android.widget.Button").text("去参加").findOne(defaultTimeout)
+        let cj = className("android.widget.Button").desc("去参加").findOne(defaultTimeout)
         if (safeClick(cj, "点击 '去参加' (双旗舰)")) {
 
             // 是否首次参加活动
@@ -846,7 +841,7 @@ function thanksgivingActivity() {
     console.info(">>>>>>>---| 感恩活动 |---<<<<<<<")
     try {
         // 是否为首次参与
-        let qucanyu = className("android.widget.Button").text("去参加").findOne(3000)
+        let qucanyu = className("android.widget.Button").desc("去参加").findOne(3000)
         if (safeClick(qucanyu, "点击 '去参与' (感恩季)")) {
             let isFirstParticipation = storages.create("isFirstParticipation");
             if (isFirstParticipation.get("isFirstParticipation") !== true) {
@@ -908,7 +903,7 @@ function miniAppSign() {
     console.info(">>>>>>>---| 程序签到 |---<<<<<<<");
     let success = false;
     try {
-        let wechatButton = className("android.widget.Button").text("去微信").findOne(defaultTimeout);
+        let wechatButton = className("android.widget.Button").desc("去微信").findOne(defaultTimeout);
         if (!safeClick(wechatButton, "点击 '去微信'")) {
             log("未找到或无法点击 '去微信' 按钮，请检查社区 App 版本");
             return;
@@ -963,9 +958,6 @@ function miniAppSign() {
     } finally {
         // 无论成功失败，尝试返回小米社区 App
         log("尝试返回小米社区 App");
-        back(); // 可能需要多次 back 或直接 launchApp
-        sleep(1000);
-        // 确保返回
         waitFor(() => {
             app.launch(packageName);
             return isInSignPage()

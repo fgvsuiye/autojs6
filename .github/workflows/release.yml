@@ -62,9 +62,8 @@ jobs:
           name: Release ${{ steps.date.outputs.tag_date }}-${{ steps.short_sha.outputs.sha }}
           body: |
             使用说明:
-              完整的脚本文件有两种方法下载至本地
-              - 方法1: 下载项目 ZIP 文件，解压至工作目录即可。
-              - 方法2: 只下载`main.js`后运行（首次运行会自动下载更新脚本）。
+              下载项目 ZIP 文件，解压至工作目录后阅读 README.md 文件，了解项目使用方法和注意事项。
+              工作目录默认为 /storage/emulated/0/脚本/
             ${{ steps.changelog_extractor.outputs.changelog_text }}
           files: |
             project_${{ steps.date.outputs.tag_date }}_${{ steps.short_sha.outputs.sha }}.zip
