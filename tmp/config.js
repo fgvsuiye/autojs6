@@ -15,7 +15,6 @@ var config = {
         [540, 1987],
         [792, 1987]
     ],
-    
     // 功能开关（1 = 启用, 0 = 禁用）
     小程序签到: 1,
     成长值记录: 1,  
@@ -27,12 +26,13 @@ var config = {
     双旗舰: 1,
     拔萝卜: 1,
     推送至微信 : 1, // 1 = 通过 ServerChan 推送消息到微信, 2 = 通过 PushPlus 推送消息到微信, 其它 = 不推送
-    serverChanToken : "", // ServerChan Token (推送至微信 = 1 时必填)
-    pushPlusToken : "",   // PushPlus Token (推送至微信 = 2 时必填)
+    
 
     // 其他配置
-    totaltime: 200                          //脚本运行时长限制(单位: 秒)
-
+    totaltime: 200,                         //脚本运行时长限制(单位: 秒)
+    serverChanToken : "", // ServerChan Token (推送至微信 = 1 时必填)
+    pushPlusToken : "",   // PushPlus Token (推送至微信 = 2 时必填)
+    token: ""             // 你的验证码服务商token（例如：1234567890）
 };
 
 module.exports = config; // 导出配置
