@@ -1,1069 +1,164 @@
 /**
- * @version 20260924
- * 小米社区签到脚本
- * 原作者：  @PJxiaoyu
- * 修改：    风中拾叶   
- * 更新说明：
-     由于验证码识别难度增加，训练模型变得异常复杂，因此替换为第三方验证码识别服务。
-     ！！！ 注意：验证码识别服务可能需要付费，具体费用请参考服务提供商的定价。
-*/
-
-importClass(android.content.Context);
-
-// --- 全局变量 ---
-var packageName = "com.xiaomi.vipaccount"   // 小米社区包名
-var capturePicPath = "./tmp/pic.png"        // 验证码截图保存路径
-var config = require("./tmp/config.js");    // 加载配置文件
-var shortTimeout = 2000                     // 短等待时间
-var defaultTimeout = 5000                   // 默认等待时间
-var dwidth = device.width;                  // 设备宽度
-var dheight = device.height;                // 设备高度
-var todayDate = formatDate(new Date());     // 今日日期字符串 YYYY-MM-DD
-var startTime = new Date().getTime();       // 脚本开始时间戳
-var lx, ly, pushContent                     // 验证码截图坐标及推送内容
-var signSuccess = false;                    // 签到成功标志
-var token = config.token;                            // 服务器推送令牌
-
-console.setSize(dwidth, dheight * 0.25)
-console.setPosition(0, 0)
-console.show()
-console.warn(">>>>>>>---| 脚本启动 |---<<<<<<<");
-console.log(`今天是：${todayDate}`);
-console.log(`设备分辨率：${dwidth}x${dheight}`);
-setScaleBases(1080, 2400);       // 设置缩放基准
-device.keepScreenOn(180 * 1000); // 保持屏幕常亮
-
-startTimeoutMonitor(config.totaltime * 1000); // 脚本超时监控
-
-// --- 主程序入口 ---
-main();
-
-// ========================
-// === 辅助函数区域 ===
-// ========================
-
-/**
- * 格式化日期为 YYYY-MM-DD
- * @param {Date} dateObj - 日期对象
- * @returns {string} 格式化后的日期字符串
+ * 小米社区自动任务主程序
+ *
+ * 作用：只负责初始化、启动任务、收尾，不处理具体任务细节。
+ * 使用：修改 config/config.js 控制任务开关和运行参数。
  */
-function formatDate(dateObj) {
-    let year = dateObj.getFullYear();
-    let month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-    let day = dateObj.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
+var sys = {
+    pkg: "com.xiaomi.vipaccount",
+    pic: "./tmp/pic.png",
+    short: 2000,
+    wait: 5000,
+    signRetry: 3,
+    unlockRetry: 3,
+    swipe: 200,
+    keep: 180000
+};
+
+var ui = {
+    sign: "签到",
+    signed: "已签到",
+    signNow: "立即签到",
+    capRefresh: "刷新验证",
+    capOk: "确认",
+    feature1: "社区勋章",
+    feature2: "社区成长等级"
+};
+
+// 配置、工具和服务
+var cfg = require("./config/config.js");
+var u = require("./utils/ui.js");
+var dev = require("./utils/device.js");
+var rt = require("./utils/runtime.js");
+var logger = require("./utils/logger.js");
+var ps = require("./services/pushService.js");
+var tasks = require("./tasks/index.js");
+
+var w = device.width;
+var h = device.height;
+var today = rt.date(new Date());
+var start = new Date().getTime();
+var state = { cx: 0, cy: 0, push: "" };
+var log = logger.create(cfg.运行.日志等级);
+log.setTag(logger.TAG.main);
+u.setLogger(log);
+
+var ctx = {
+    sys: sys,
+    ui: ui,
+    cfg: cfg,
+    w: w,
+    h: h,
+    today: today,
+    state: state,
+    u: u,
+    isSign: isSign,
+    log: log
+};
+
+/** 判断当前页面是否为签到相关页面。 */
+function isSign() {
+    u.sleep(sys.short, "等待页面稳定");
+    return textContains(ui.feature1).exists() && textContains(ui.feature2).exists();
 }
 
-/**
- * 启动脚本总运行时间监控
- * @param {number} maxRuntimeMs - 最大允许运行时间 (毫秒)
- */
-function startTimeoutMonitor(maxRuntimeMs) {
-    threads.start(function () {
-        setInterval(function () {
-            let currentTime = new Date().getTime();
-            if (currentTime - startTime > maxRuntimeMs) {
-                log(`脚本运行超过设定的 ${maxRuntimeMs / 1000} 秒，强制退出`);
-                exit();
-            }
-        }, 10 * 1000); // 每 10 秒检查一次
-    });
+/** 检查关键配置，避免明显错误导致脚本进入任务后才失败。 */
+function validCfg() {
+    if (!cfg || typeof cfg !== "object") return false;
+    if (!cfg.解锁 || !cfg.任务 || !cfg.运行 || !cfg.验证码) return false;
+    if (cfg.解锁.方式 == 1 && (!Array.isArray(cfg.解锁.图案) || !cfg.解锁.图案.length)) return false;
+    if (cfg.解锁.方式 == 2 && (cfg.解锁.密码 === undefined || cfg.解锁.密码 === null)) return false;
+    return true;
 }
 
-/**
- * 安全地点击控件，如果控件存在
- * @param {UiObject} control - UI 控件
- * @param {string} logMsg - 点击成功时记录的消息
- * @returns {boolean} 是否成功点击
+/** 执行一个任务，并统一输出任务启动与结果日志。
+ * @param {Object} task 任务对象。
+ * @returns {boolean} 是否执行成功。
  */
-function safeClick(control, logMsg) {
-    if (control) {
-        try {
-            if (!control.click()) clickCenter(control);
-            if (logMsg) log(logMsg);
-            sleep(500); // 点击后短暂延时
-            return true;
-        } catch (e) {
-            console.error(`点击控件时出错: ${e}`);
-            return false;
-        }
-    }
-    return false;
-}
-
-/**
- * 点击控件的中心位置
- * @param {UiObject} obj - UI 控件
- */
-function clickCenter(obj) {
+function runTask(task) {
+    if (!task || typeof task.run !== "function") return true;
+    var tag = task.tag || logger.TAG.main;
+    log.setTag(tag);
+    log.info("任务启动");
     try {
-        if (obj instanceof UiObject === false) {
-            return;
-        }
-        let x = obj.bounds().centerX();
-        let y = obj.bounds().centerY();
-        console.log('点击中心坐标', x, y)
-        click(x, y);
+        var ok = task.run(ctx) !== false;
+        log.info("任务结果：" + (ok ? "成功" : "失败"));
+        return ok;
     } catch (e) {
-        console.error(`点击控件时出错: ${e}`);
-    }
-}
-
-/**
- * 封装的 wait 函数。
- * @param {Function} conditionFunc - 返回 boolean 的条件函数
- * @param {number} maxRetries - 最大尝试次数
- * @param {number} intervalMs - 每次尝试间隔 (ms)
- * @param {string} description - 等待描述，用于日志输出
- * @returns {boolean} 条件是否在指定次数内达成
- */
-function waitFor(conditionFunc, maxRetries, intervalMs, description) {
-    //log(`等待条件: ${description}`);
-    for (let i = 0; i < maxRetries; i++) {
-        if (conditionFunc()) {
-            //log(`条件达成: ${description}`);
-            return true;
-        }
-        if (i < maxRetries - 1) sleep(intervalMs);
-    }
-    //log(`等待超时: ${description}`);
-    return false;
-}
-
-// ========================
-// === 核心功能函数区域 ===
-// ========================
-
-
-/**
- * 解锁操作
- * @returns {boolean} 返回操作是否按预期执行完成
- */
-function attemptSingleUnlock() {
-    let unlockMethod = config.解锁方式;
-    let randomOffsetY = random(-150, 150); // 随机偏移。
-
-    // 1. 确保屏幕亮起
-    if (!device.isScreenOn()) {
-        log("屏幕未点亮，尝试唤醒...");
-        device.wakeUp();
-        sleep(shortTimeout); // 等待屏幕亮起稳定
-        if (!device.isScreenOn()) {
-            log("唤醒屏幕失败。");
-            return false; // 唤醒失败，本次尝试中止
-        }
-        log("屏幕已成功唤醒。");
-    } else {
-        log("屏幕已点亮。");
-    }
-    if (unlockMethod != 1 && unlockMethod != 2) {
-        log("上滑解锁");
-        swipe(dwidth / 2, dheight * 0.7 + randomOffsetY, dwidth / 2, dheight * 0.3 + randomOffsetY, 200); // 上滑
-        sleep(500); // 等待滑动动画
-        return true; 
-    }
-    // 2. 尝试上滑进入解锁界面 
-    log("上滑以显示解锁界面...");
-    let unlockInterfaceVisible = false;
-    for (let i = 0; i < 3; i++) { // 最多尝试3次上滑
-        if (waitFor(() => {
-            swipe(dwidth / 2, dheight * 0.7 + randomOffsetY, dwidth / 2, dheight * 0.3 + randomOffsetY, 200); // 上滑
-            sleep(500); // 等待滑动动画
-            return textMatches(/.*?(紧急呼叫|Emergency call|图案|数字|混合|Pattern|PIN|Password).*?/).exists(); // 检查解锁界面标志
-        }, 5, 1000)) {
-            unlockInterfaceVisible = true;
-            break; // 成功找到解锁界面，退出循环
-        } else {
-            log("解锁界面未出现，尝试再次上滑");
-            sleep(1000); // 失败后等待一下再重试
-        }
-    }
-
-    if (!unlockInterfaceVisible && (unlockMethod == 1 || unlockMethod == 2)) {
-        log("多次尝试后仍未进入解锁界面，本次解锁尝试中止。");
-        return false; // 表示本次解锁尝试因找不到解锁界面而失败
-    }
-
-    sleep(1000); // 等待解锁界面稳定
-
-    // 3. 解锁操作
-    try {
-        if (unlockMethod == 1) {
-            log("执行图案解锁...");
-            if (!config || !config.锁屏图案坐标 || !Array.isArray(config.锁屏图案坐标) || config.锁屏图案坐标.length === 0) {
-                log("错误：锁屏图案坐标未配置或格式不正确。");
-                return false; // 配置错误，无法继续
-            }
-            gesture(800, config.锁屏图案坐标); // 增加手势时间
-        } else if (unlockMethod == 2) {
-            log("执行数字密码解锁...");
-            if (!config || typeof config.锁屏数字密码 === 'undefined') {
-                log("错误：锁屏数字密码未配置。");
-                return false; // 配置错误
-            }
-            let password = String(config.锁屏数字密码);
-            for (let digit of password) {
-                let btn = desc(digit).findOne(shortTimeout);
-                if (!safeClick(btn)) {
-                    log(`未找到数字 '${digit}' 按钮`);
-                    console.error("数字密码解锁失败");
-                    return false;
-                }
-                sleep(100); // 按键间隔
-            }
-        } else {
-            log("未知的解锁方式配置：" + unlockMethod);
-            return false; // 无效配置
-        }
-
-        log("解锁操作序列执行完成，等待系统响应...");
-        sleep(2000); // 等待解锁动画和状态更新
-        return true; // 表示解锁动作序列已成功执行
-
-    } catch (e) {
-        console.error(`解锁操作过程中发生异常: ${e}`);
-        return false; // 执行出错
-    }
-}
-
-/**
- * 检查设备解锁状态
- * @param {number} maxRetries - 最大解锁尝试次数，默认为 3。
- * @returns {boolean} - 设备成功解锁则返回 true，否则返回 false。
- */
-function ensureDeviceUnlocked(maxRetries = 3) {
-    console.info(">>>>>>>---| 解锁设备 |---<<<<<<<");
-    let km = context.getSystemService(Context.KEYGUARD_SERVICE);
-    let retryCount = 0;
-    // 初始检查：如果设备未锁定，直接返回成功
-    if (!km.inKeyguardRestrictedInputMode()) {
-        log("设备当前状态：未锁定。");
-
-        return true;
-    }
-
-    log("设备当前状态：已锁定。");
-
-    // 主循环：尝试解锁直到成功或达到最大次数
-    while (retryCount < maxRetries) {
-        retryCount++;
-        log(`--- 第 ${retryCount} / ${maxRetries} 次尝试解锁 ---`);
-
-        // 获取当前屏幕状态
-        let isScreenOnInitially = device.isScreenOn();
-        log(`当前屏幕状态：${isScreenOnInitially ? '亮屏' : '息屏'}`);
-
-        let attemptSuccess = attemptSingleUnlock();
-
-        if (!attemptSuccess) {
-            log(`第 ${retryCount} 次解锁尝试中操作执行失败或中断。`);
-            sleep(shortTimeout); // 失败后等待一下再重试
-            continue; // 继续下一次循环尝试
-        }
-
-        // 解锁操作执行后，再次检查锁定状态
-        km = context.getSystemService(Context.KEYGUARD_SERVICE); // 重新获取服务以获得最新状态
-        if (!km.inKeyguardRestrictedInputMode()) {
-            log(`第 ${retryCount} 次解锁成功：设备已解锁！`);
-            return true;
-        } else {
-            log(`第 ${retryCount} 次解锁尝试后，设备仍处于锁定状态。`);
-            // 可能原因：密码/图案错误、解锁界面未按预期消失、系统延迟等
-            KeyCode(26)
-            log("准备进行下一次重试...");
-            sleep(shortTimeout); // 重试前等待
-        }
-    }
-
-    // 如果循环结束仍未解锁
-    log(`已达到最大尝试次数 (${maxRetries}次)，设备仍未解锁。`);
-    console.error("解锁失败！请检查配置（解锁方式、密码/图案）、设备状态或增加等待时间。");
-    return false; // 所有尝试均失败，函数返回 false
-}
-
-
-/**
- * 强制停止应用
- * @param {string} packageName - 应用包名
- */
-function killApp(packageName) {
-    log(`尝试结束应用: ${packageName}`);
-    try {
-        app.openAppSetting(packageName);
-        sleep(1500); // 等待设置页面加载
-        // 查找“结束运行”或“强制停止”按钮
-        let stopButton = textMatches(/(结束运行|强行停止|FORCE STOP|Force stop)/).findOne(defaultTimeout);
-        if (stopButton && stopButton.enabled()) {
-            if (click(stopButton)) {
-                let ensureButton = textMatches(/(确定|OK)/).findOne(shortTimeout);
-                if (ensureButton) {
-                    click(ensureButton);
-                    log("结束小米社区");
-                } else {
-                    log("程序未运行");
-                }
-            } else {
-                log("无法点击 '结束运行/强行停止' 按钮");
-            }
-        } else {
-            log("未找到或无法点击结束按钮，可能应用未运行");
-        }
-    } catch (e) {
-        console.error(`结束应用 ${packageName} 时出错: ${e}`);
-    }
-    sleep(1000); // 等待结束动画
-}
-
-/**
- * 重启应用
- * @param {boolean} firstOpen - 是否是首次启动(浏览帖子)
- */
-function restartApp(firstOpen = false) {
-    killApp(packageName);
-    log("启动小米社区应用");
-    if (app.launch(packageName)) {
-        // 等待应用启动加载完成，检查首页特征元素
-        waitFor(() => desc('签到').findOne(defaultTimeout), 2, shortTimeout);
-    } else {
-        log("启动应用失败");
-    }
-    // 处理可能的权限请求弹窗
-    let allowBtn = textMatches(/(允许|允许使用|Allow)/).findOne(1000);
-    if (allowBtn) safeClick(allowBtn);
-    if (!firstOpen) {
-        // 非首次启动
-        let signBtn = desc("签到").findOne(shortTimeout);
-        safeClick(signBtn, "点击 '签到' 按钮")
-    }
-}
-
-/**
- * 浏览帖子任务
- */
-function browsePosts() {
-    console.info(">>>>>>>---| 浏览帖子 |---<<<<<<<");
-    try {
-        if (waitFor(() => {
-            let regex = /((0[0-9]|1[0-9]|2[0-3]):(0[0-9]|[1-5][0-9]))|(0[0-9]|1[0-9]|2[0-3])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])|(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/;
-            var targetSelectors = [
-                textMatches(regex),
-                desc("评论"),
-                id('img_tri_fst')
-            ];
-            for (let selector of targetSelectors) {
-                let target = selector.findOne(shortTimeout);
-                if (target) {
-                    log("找到帖子页面");
-                    target.clickable() ? safeClick(target, "点击帖子") : clickCenter(target); // 点击帖子
-                    return true;
-                }
-                swipe(dwidth * 0.5, dheight * 0.8, dwidth * 0.5, dheight * 0.5, random(400, 600));
-            }
-            log("未找到帖子页面,尝试重启应用");
-            restartApp(true);
-            return false;
-        }, 2, 1000)) {
-            log("打开帖子成功, 开始浏览");
-            sleep(random(6000, 7000)); // 随机浏览时间
-            swipe(dwidth * 0.5, dheight * 0.8, dwidth * 0.5, dheight * 0.2, random(400, 600)); // 向下滚动
-            sleep(random(6000, 7000)); // 再浏览一会儿
-            log("浏览完成");
-        } else {
-            log("打开帖子失败或超时");
-        }
-        back(); // 返回列表页
-    } catch (e) {
-        console.error(`浏览帖子任务出错: ${e}`);
-        back(); // 尝试返回
-    }
-}
-
-/**
- * 处理新的验证码签到
- * @returns {boolean} 签到是否成功
- */
-function handleNewSign() {
-    var res_data = null;
-    for (let i = 0; i < 3; i++) {
-        log(`开始第 ${i + 1} 次签到尝试`);
-
-        // 1. 截图
-        captureVerificationCodeImage();
-        
-        // 2. 调用验证码服务商API
-        let capturedImage = images.read(capturePicPath);
-        log("调用验证码服务商API...");
-        try {
-            let res = http.post("http://api.jfbym.com/api/YmServer/customApi", {
-                'image': images.toBase64(capturedImage),
-                'token': token,
-                'type': 88888,
-            });
-            let html = res.body.string();
-            res_data = html.split('data":"')[1].split('","time')[0];
-        } catch (e) {
-            log(`验证码服务商API调用出错: ${e}`);   
-        } finally {
-            capturedImage.recycle(); // 回收截图资源
-        }
-
-        // 3. 处理识别结果并点击
-        let points = res_data.split('|');
-        if (points && points.length > 0) {
-            log(`识别成功 ${points.length} 个目标`);
-            clickDetectedItems(points); // 点击识别出的图标
-            // 检查签到结果
-            if (waitFor(() => textContains("已签到").findOne(5000), 2, 1000)) {
-                log("签到成功！");
-                signSuccess = true;
-                break; // 成功则跳出循环
-            } else {
-                log("提交后未检测到 '已签到'，可能失败，尝试刷新");
-                click("刷新验证")
-                sleep(1500); // 等待刷新
-            }
-        } else {
-            log("YOLO 未识别到目标或识别失败，尝试刷新验证码");
-            click("刷新验证")
-            sleep(1500); // 等待验证码刷新
-        }
-    }
-    return signSuccess;
-}
-
-/**
- * 截取验证码区域图像
- * @returns {Image | null} 截图对象或 null
- */
-function captureVerificationCodeImage() {
-    log("尝试截取验证码区域");
-    sleep(2000); // 等待界面稳定
-    let image = null;
-    try {
-        // 定位验证码区域的边界元素
-        let topBoundaryParent = textContains("请在下图依次").findOne(defaultTimeout)?.parent()?.parent();
-        let bottomBoundary = desc("确认").findOne(defaultTimeout);
-        if (topBoundaryParent && bottomBoundary) {
-            let bounds = topBoundaryParent.bounds();
-            let bottomBounds = bottomBoundary.bounds();
-            lx = bounds.left;
-            ly = bounds.top;
-            let wid = bottomBounds.right - lx; // 使用提交按钮右侧作为宽度
-            let hei = bottomBounds.top - ly; // 使用提交按钮顶部作为高度
-
-            if (wid > 0 && hei > 0 && lx >= 0 && ly >= 0 && (lx + wid) <= dwidth && (ly + hei) <= dheight) {
-                console.hide();
-                sleep(500)
-                let screen = captureScreen();
-                if (!screen) {
-                    log("获取屏幕截图失败");
-                    return null;
-                }
-                image = images.clip(screen, lx, ly, wid, hei);
-                console.show()
-                if (image) {
-                    files.ensureDir(capturePicPath); // 确保目录存在
-                    images.save(image, capturePicPath, "jpg", 90); // 保存截图用于模型输入
-                    log(`验证码区域截图成功: (${lx},${ly},${wid},${hei})`);
-                    return;
-                } else {
-                    log("裁剪截图失败");
-                }
-            } else {
-                log("计算出的截图区域无效");
-            }
-        } else {
-            log("未能定位到验证码区域边界元素");
-        }
-    } catch (e) {
-        console.error(`截图验证码时出错: ${e}`);
-    }
-    return null; // 失败返回 null
-}
-
-/**
- * 根据识别结果点击图标
- * @param {String}  - 识别出的目标点坐标组,格式为 x1,y1|x2,y2|...|xn,yn|,其中x,y为坐标值
- */
-
-function clickDetectedItems(points) {
-    log("开始按顺序点击识别出的图标");
-    for (let i = 0; i < points.length; i++) {
-        let coords = points[i].split(',');
-        let centerX = parseInt(coords[0]);
-        let centerY = parseInt(coords[1]);
-        let finalX = centerX + lx;
-        let finalY = centerY + ly;
-        log(`点击第 ${i + 1} @ (${finalX}, ${finalY})`);
-        // 使用 click 精确点击中心点
-        if (!click(finalX, finalY)) {
-            console.warn(`点击坐标 (${finalX}, ${finalY}) 可能失败`);
-        }
-        sleep(random(500, 800)); // 模拟点击间隔 
-    };
-    sleep(2000)
-    content("确认").findOne().click(); // 点击确认按钮
-    log("图标点击完成");
-}
-
-/**
- * 执行签到流程
- * @returns {boolean} 签到是否成功
- */
-function performSign() {
-    console.info(">>>>>>>---| 开始签到 |---<<<<<<<");
-    try {
-        let isSigned = textContains("已签到").findOne(shortTimeout);
-        if (isSigned) {
-            log("今日已签到");
-            signSuccess = true;
-            return true; // 返回签到状态
-        }
-        // 检查是否填写token
-        if (!token) {
-            toastLog("请在配置中填写验证码服务商token");
-            return false;
-        }
-        let signInButton = text("立即签到").findOne(defaultTimeout);
-        if (!signInButton) {
-            log("未找到 '立即签到' 按钮");
-            return false;
-        }
-
-        if (safeClick(signInButton, "点击 '立即签到'")) {
-            sleep(1000); // 等待验证码界面加载
-            // 申请截图权限
-            if (!requestScreenCapture()) {
-                toastLog("请求截图权限失败");
-                return false;
-            }
-            return handleNewSign(); // 处理带验证码的签到
-        } else {
-            log("点击 '立即签到' 失败");
-            return false;
-        }
-    } catch (e) {
-        console.error(`执行签到流程时出错: ${e}`);
+        log.error("任务异常：" + e);
         return false;
     }
 }
 
-/**
- * 检查是否在签到主页面
- * @returns {boolean} 是否在签到页面
- */
-function isInSignPage() {
-    // 签到图标
-    sleep(shortTimeout);
-    let feature1 = textContains("社区勋章").exists();
-    let feature2 = textContains("社区成长等级").exists();
-    // 要求两个特征满足
-    let inPage = feature1 && feature2;
-    if (inPage) {
-        log("当前在签到页面");
-    } else {
-        log("当前不在签到页面");
-    }
-    return inPage;
-
+/** 初始化控制台、屏幕常亮、静音和总运行时间限制。 */
+function init() {
+    console.setSize(w, h * .25);
+    console.setPosition(0, 0);
+    console.show();
+    log.info("脚本启动");
+    log.log("今天是：" + today);
+    log.log("设备分辨率：" + w + "x" + h);
+    setScaleBases(1080, 2400);
+    device.keepScreenOn(sys.keep);
+    rt.timer(Number(cfg.运行.总时长) * 1000, log);
+    device.setMusicVolume(0);
 }
 
-/**
- * 拔萝卜活动
- */
-function carrotActivity() {
-    console.info(">>>>>>>---| 萝卜活动 |---<<<<<<<");
-    try {
-        swipe(dwidth * 0.5, dheight * 0.8, dwidth * 0.5, dheight * 0.4, 500); // 向下滚动查找
-        sleep(1000);
-
-        let goButton = desc("去看看").findOne(defaultTimeout);
-        if (safeClick(goButton, "点击 '去看看' (拔萝卜)")) {
-            sleep(1000); // 停留2秒
-            log("拔萝卜活动签到（模拟）");
-            back();
-        } else {
-            log("未找到 '去看看' 按钮 (拔萝卜)");
-        }
-    } catch (e) {
-        console.error(`拔萝卜活动出错: ${e}`);
-        back(); // 尝试返回
-    }
-}
-
-/**
- * 观看视频任务
- */
-function watchVideoTask() {
-    console.info(">>>>>>>---| 视频任务 |---<<<<<<<");
-    try {
-        let watchButton = className("android.widget.Button").desc("去浏览").findOne(defaultTimeout);
-        if (safeClick(watchButton, "点击 '去浏览' (视频)")) {
-            log("开始浏览视频");
-            let watchStartTime = new Date().getTime();
-            let targetWatchMinutes = 5; // 目标观看分钟数
-            let lastLogMinute = -1;
-
-            while (true) {
-                let elapsedMs = new Date().getTime() - watchStartTime;
-                let elapsedMinutes = elapsedMs / (1000 * 60);
-
-                if (elapsedMinutes >= targetWatchMinutes) {
-                    log(`已观看 ${targetWatchMinutes} 分钟，退出视频`);
-                    break;
-                }
-
-                let currentMinute = Math.floor(elapsedMinutes);
-                if (currentMinute > lastLogMinute) {
-                    log(`已观看约 ${currentMinute} 分钟`);
-                    lastLogMinute = currentMinute;
-                }
-
-                // 模拟观看行为：随机滑动
-                sleep(random(10000, 15000));
-                let randomX = dwidth / 2 + random(-50, 50);
-                let startY = dheight * 0.8 + random(-50, 50);
-                let endY = dheight * 0.3 + random(-50, 50);
-                swipe(randomX, startY, randomX, endY, random(400, 600));
-            }
-            back(); // 退出视频页面
-        } else {
-            log("未找到 '去浏览' 按钮 (视频)");
-        }
-    } catch (e) {
-        console.error(`观看视频任务出错: ${e}`);
-        back(); // 尝试返回
-    }
-}
-
-/**
- * 记录成长值
- */
-function recordLevel() {
-    console.info(">>>>>>>---| 积分记录 |---<<<<<<<");
-    try {
-        let continuousSign = pickup(textMatch(/已连续签到 (\d{1,4}) 天/), 'text');
-        let days = continuousSign ? continuousSign.split(" ")[1] : "0"; // 连续签到天数
-        let allTexts = className("android.widget.TextView").find();
-        let dailyIndex = pickup(text("每日任务"), 'indexInParent');
-        let newbieIndex = pickup(text('新手任务'), 'indexInParent');
-        let dailyHeight = pickup(text("每日签到"), "boundsHeight");
-        let parentId = pickup(text("每日签到"), "p1", 'id');
-        let taskList = allTexts.filter(item => {
-            let index = item.indexInParent();
-            let boundsHeight = detect(item, "boundsHeight");
-            let parent = detect(item, "p1", 'id');
-            let res = index > dailyIndex &&                 // 下标小于每日任务
-                index < newbieIndex &&                      // 下标大于新手任务
-                Math.abs(boundsHeight - dailyHeight) < 2 && // 高度相似
-                parent == parentId;                         // 同一父元素
-            return res
-        });
-        taskList = taskList.map(item => item.text());
-        let levelEntry = text("社区成长等级").findOne(defaultTimeout);
-        if (safeClick(levelEntry, "点击 '社区成长等级'")) {
-            sleep(2000); // 等待明细页面加载
-            let todayStr = todayDate.replace(/-/g, "/"); // 匹配页面格式
-            let totalPoints = 0;    // 总成长值
-            let lines = []          // 输出字符串列表
-            let completedList = {}  // 已完成任务列表
-            let count = 0;          // 计数器
-            lines.push("## 任务报告\n" +
-                "* 时间：" + new Date().toLocaleString() + "\n" +
-                "* 来自 Auto.js 脚本推送\n"); // Markdown 格式
-
-            lines.push("| 任务名称 | 数值 | 状态 |");
-            lines.push("|---|---|---|");
-            // 查找今日明细
-            let todayItems = className("android.widget.TextView").textContains(todayStr).find();
-            if (todayItems.nonEmpty()) {
-                log("--- 今日成长值明细 ---");
-                todayItems.forEach(item => {
-                    try {
-                        let taskName = item.previousSibling().text(); // 任务名称
-                        let pointsText = item.nextSibling().text(); // 分值
-                        let points = parseInt(pointsText.replace('+', ''));
-                        // 检查任务名称是否已存在于 completedList，如果存在则将分值累加。
-                        if (completedList.hasOwnProperty(taskName)) {
-                            completedList[taskName] = parseInt(completedList[taskName]) + points;
-                        } else {
-                            completedList[taskName] = pointsText;
-                        }
-                        totalPoints += points;
-                    } catch (eInner) {
-                        console.warn(`解析某行明细时出错: ${eInner}`);
-                    }
-                });
-            } else {
-                log("未找到今日成长值明细");
-            }
-
-
-            for (var i = 0; i < taskList.length; i++) {
-                var originalTaskName = taskList[i];       // taskList中的原始名称
-                var displayedTaskName = originalTaskName; // 默认情况下，显示原始名称
-                var reward = "0";       // 默认分值
-                var statusIcon = "❌"; // 默认状态图标
-                // 遍历completedList，检查当前任务是否已完成
-                for (let key in completedList) {
-                    let finalCommon = hasCommonSubstring(originalTaskName, key);
-                    if (finalCommon) {
-                        displayedTaskName = finalCommon; // 如果找到公共子串，则使用公共子串作为显示名称
-                        reward = completedList[key];
-                        statusIcon = "✅";
-                        count++;
-                        break;  // 跳出循环
-                    }
-                }
-                // 构建输出字符串并添加到lines列表
-                var line = "| " + displayedTaskName + " | " + reward + " | " + statusIcon + " |";
-                lines.push(line);
-            }
-            lines.push("-----");
-            lines.push("* 当前信息");
-            lines.push("");
-            lines.push("| 项目 | 状态 |");
-            lines.push("|---|---|");
-            lines.push(`| 今日总计 | ${totalPoints} |`);
-            // 查找当前总成长值
-            let currentLevelText = pickup(textMatch(/成长值 (\d{1,5})\/(\d{1,5})/), 'text');
-            let levelText = pickup(textContains("段").boundsCenterX(0.4, 0.6), 'text')
-            if (currentLevelText && levelText) {
-                // 尝试提取数字部分
-                let match = currentLevelText.split(" ");
-                if (match && match[1]) {
-                    let currentTotal = parseInt(match[1]);
-                    lines.push(`| 今日任务完成 | ${count} / ${taskList.length} |`)
-                    lines.push(`| 连续签到天数 | ${days} |`)
-                    lines.push(`| 当前成长值 | ${currentTotal} |`);
-                    lines.push(`| 当前等级 | ${levelText} |`);
-                    lines.push(`| 距下一段还需 | ${match[1].split("/")[1] - currentTotal} |`);
-                    lines.push('-----')
-
-                    if (count != taskList.length) {
-                        lines.push("* ⚠️ **注意** 今日有任务未完成，请打开社区检查\n");
-                    } else {
-                        lines.push("* ✅ 所有任务已完成");
-                    }
-
-                    try {
-                        files.append("./tmp/level.txt", `\n${todayDate}：今日：+${String(totalPoints).padEnd(5, " ")} 当前 ${levelText} 总计：${match[1]}`);
-                        log(`成长值已记录`);
-                    } catch (eFile) {
-                        console.error(`写入成长值记录文件失败: ${eFile}`);
-                    }
-                } else {
-                    log("无法从文本中解析当前成长值数字");
-                }
-            } else {
-                log("未找到包含 '当前成长值' 的文本");
-            }
-            pushContent = lines.join("\n");
-            console.log("推送内容预览：\n" + pushContent);
-            log("----------------------");
-            back(); // 返回签到页
-        } else {
-            log("未找到 '社区成长等级' 入口");
-        }
-    } catch (e) {
-        console.error(`记录成长值出错: ${e}`);
-        back(); // 尝试返回
-    }
-
-    /**
-     * 判断两个字符串是否有公共子串。
-     * @param {string} str1 - 字符串1
-     * @param {string} str2 - 字符串2
-     * @returns {string|boolean} 公共子串或False
-     */
-    function hasCommonSubstring(str1, str2) {
-        let shorter, longer;
-        if (str1.length > str2.length) {
-            shorter = str2;
-            longer = str1;
-        } else {
-            shorter = str1;
-            longer = str2;
-        }
-        // 从最长字符串开始遍历
-        for (let len = shorter.length; len >= 3; len--) {
-            for (let i = 0; i <= len - 3; i++) {
-                let subStr = shorter.substring(i, len);
-                // 找到公共子串
-                if (longer.includes(subStr)) {
-                    return subStr;
-                }
-            }
-        }
-        return false;
-    }
-}
-
-/**
- * 双旗舰活动
- */
-function dualFlagshipActivity() {
-    console.info(">>>>>>>---| 旗舰活动 |---<<<<<<<");
-    try {
-        let cj = className("android.widget.Button").desc("去参加").findOne(defaultTimeout)
-        if (safeClick(cj, "点击 '去参加' (双旗舰)")) {
-
-            // 是否首次参加活动
-            let register = className("android.widget.Button").text("立即报名").findOne(shortTimeout)
-            if (register) {
-                let checkBox = register.parent().child(1).click()
-                if (checkBox) {
-                    safeClick(register, "点击 '立即报名' (双旗舰)")
-                    sleep(2000)
-                    let x = dwidth * 0.74
-                    let y = dheight * 0.94
-                    click(x, y)
-                    sleep(1000)
-                }
-            }
-            解锁()
-            sleep(1000)
-            log("完成双旗舰活动")
-            back()
-        } else {
-            log("未找到活动入口")
-        }
-    } catch (e) {
-        console.error(`双旗舰活动出错: ${e}`);
-        back(); // 尝试返回
-    }
-}
-
-/**
- * 感恩季活动
- */
-function thanksgivingActivity() {
-    console.info(">>>>>>>---| 感恩活动 |---<<<<<<<")
-    try {
-        // 是否为首次参与
-        let qucanyu = className("android.widget.Button").desc("去参加").findOne(3000)
-        if (safeClick(qucanyu, "点击 '去参与' (感恩季)")) {
-            let isFirstParticipation = storages.create("isFirstParticipation");
-            if (isFirstParticipation.get("isFirstParticipation") !== true) {
-                let btn1 = className("android.widget.Button").text("立即报名").findOne(3000);
-                if (btn1) {
-                    detect(btn1, 's>1', 'click')
-                    sleep(300);
-                    safeClick(btn1, "点击 '立即报名'");
-                    sleep(300);
-                    pickup(textContains("确定"), "click");
-                    isFirstParticipation.put("isFirstParticipation", true);
-                }
-            }
-            sleep(1000)
-            解锁()
-            sleep(1000)
-            back()
-            sleep(1000)
-        } else {
-            log("未找到活动入口")
-        }
-    } catch (e) {
-        console.error(`感恩季活动出错: ${e}`);
-        back(); // 尝试返回
-    }
-}
-/**
- * 解锁
- */
-function 解锁() {
-    let jpso = className('TextView').text('可解锁').find()
-    let count = pickup(text("去提升"), "p1c1", "text");
-    if (jpso.size() > 0 && count > 0) {
-        for (i = 0; i < jpso.size(); i++) {
-            var control = jpso.get(i);
-            if (count < 1) {
-                log("解锁次数不足")
-                break;
-            }
-            safeClick(control, "点击解锁");
-            log("第" + (i + 1) + "次解锁");
-            sleep(1000)
-            pickup(text("炫耀一下"), "p1s>1", "click");
-            sleep(1000)
-            if (text("可获得1次解锁机会").exists() || i >= 10 || text("等待解锁").exists()) {
-                log("解锁次数不足")
-                break
-            }
-        }
-    } else {
-        console.log("今日无解锁次数");
-    }
-}
-
-/**
- * 小程序签到
- */
-function miniAppSign() {
-    console.info(">>>>>>>---| 程序签到 |---<<<<<<<");
-    let success = false;
-    try {
-        let wechatButton = className("android.widget.Button").desc("去微信").findOne(defaultTimeout);
-        if (!safeClick(wechatButton, "点击 '去微信'")) {
-            log("未找到或无法点击 '去微信' 按钮，请检查社区 App 版本");
-            return;
-        }
-        // 等待微信小程序加载
-        if (waitFor(() => {
-            let editProfileBtn = textContains('编辑资料').findOne(defaultTimeout);
-            let dailySignBtn = textContains("每日签到").exists();
-            if (editProfileBtn && dailySignBtn) {
-                return true;
-            } else {
-                if (!editProfileBtn) {
-                    log("未找到 '编辑资料' 按钮");
-                }
-                if (!dailySignBtn) {
-                    log("未找到 '每日签到' 按钮");
-                }
-                return false;
-            }
-        }, 2, 1000)) { // 等待时间加长
-            log("进入微信小程序");
-            sleep(1000);
-            // 循环检查签到状态并尝试签到
-            success = waitFor(() => {
-                if (text("已签到").exists()) {
-                    log("小程序已签到");
-                    return true; // 条件达成，退出等待
-                } else {
-                    let signButton = text("去签到").findOne(shortTimeout);
-                    if (safeClick(signButton, "点击 '去签到'")) {
-                        sleep(1500); // 等待签到动画或状态更新
-                        // 再次检查是否已签到
-                        return text("已签到").exists();
-                    } else {
-                        log("未找到小程序 '去签到' 按钮，可能已签到或页面结构变化");
-                        // 如果找不到按钮也找不到“已签到”，可能需要返回 true 避免死循环，或者认为失败
-                        return text("已签到").exists(); // 再查一次
-                    }
-                }
-            }, 3, 2000); // 重试次数减少，间隔增加
-            if (!success) {
-                log("小程序签到失败或超时");
-            }
-        } else {
-            log("未能成功进入微信小程序或布局获取失败");
-            log("尝试坐标点击，无法保证准确性。");
-            click(cX(886), cY(1184))
-            sleep(1000)
-        }
-    } catch (e) {
-        console.error(`小程序签到出错: ${e}`);
-    } finally {
-        // 无论成功失败，尝试返回小米社区 App
-        log("尝试返回小米社区 App");
-        waitFor(() => {
-            app.launch(packageName);
-            return isInSignPage()
-        }, 3, 1000);
-    }
-}
-
-/**
- * 跳过启动广告
- */
-function skipAd() {
-    let closeButton = contentMatches(/(关闭|跳过|Skip)/).findOne(2000) ||
-        idMatches(/.*(close|skip|cancel).*/).findOne(1000); // 尝试匹配常见ID
-
-    if (closeButton && clickCenter(closeButton)) {
-        log("跳过启动广告");
-    } else {
-        log("未检测到广告或无法跳过");
-    }
-}
-
-// ========================
-// === 主程序逻辑 ===
-// ========================
-function main() {
-    var initialMusicVolume = device.getMusicVolume();
-    device.setMusicVolume(0); // 静音
-    log("设备已静音");
-
-    // 设置退出时恢复
+/** 注册退出清理动作，恢复音量并释放常亮状态。 */
+function cleanup(oldVol) {
     events.on("exit", function () {
-        console.hide(); // 隐藏控制台
-        device.setMusicVolume(initialMusicVolume);
-        device.cancelKeepingAwake();
-        log(`设备音量已恢复到 ${initialMusicVolume}`);
-        log(`脚本运行总耗时: ${((new Date().getTime() - startTime) / 1000).toFixed(2)} 秒`);
-        console.warn(">>>>>>>---| 脚本结束 |---<<<<<<<");
+        try { console.hide(); } catch (e1) {}
+        try { device.setMusicVolume(oldVol); } catch (e2) {}
+        try { device.cancelKeepingAwake(); } catch (e3) {}
+        log.info("脚本结束，运行 " + ((new Date().getTime() - start) / 1000).toFixed(2) + " 秒");
     });
+}
+
+/** 主流程：启动社区、执行任务、推送结果并退出。 */
+function main() {
+    var oldVol = device.getMusicVolume();
+    cleanup(oldVol);
+
+    if (!validCfg()) {
+        log.error("关键配置无效，退出");
+        exit();
+        return;
+    }
+
+    init();
+
     try {
-        // 1. 处理屏幕状态和解锁
-        if (!ensureDeviceUnlocked(3)) { // 最多尝试3次
-            log("无法解锁设备，脚本退出。");
-            exit();
-        }
+        if (!dev.unlock(ctx, sys.unlockRetry)) return;
+        log.setTag(logger.TAG.main);
+        dev.restart(ctx, true);
+        dev.skipAd(ctx);
 
-        // 2. 重启应用并跳过广告
-        restartApp(true);
-        skipAd();
+        log.setTag(logger.TAG.main);
+        var ts = tasks.get(cfg);
+        for (var p = 0; p < ts.pre.length; p++) runTask(ts.pre[p]);
 
-        if (config.浏览帖子) browsePosts(); // 帖子浏览
+        log.setTag(logger.TAG.main);
+        if (!u.wait(function () {
+            var btn = desc(ui.sign).findOne(sys.wait);
+            if (btn) u.click(btn, "进入签到页面");
+            else dev.restart(ctx, false);
+            return isSign();
+        }, 2, 3000, "进入签到页")) return;
 
-        // 3. 进入签到页面
-        if (!waitFor(() => {
-            let signBtn = desc('签到').findOne(defaultTimeout);
-            if (signBtn) {
-                signBtn.click();
-            } else {
-                log("未找到签到按钮,尝试重启应用");
-                restartApp(false); // 重启
-            }
-            return isInSignPage();
-        }, 2, 3000)) {
-            log("多次尝试后仍无法进入签到页面，退出脚本");
-            exit();
-        }
-
-        // 4. 执行签到任务
-
-        performSign();
-
-        // 5. 根据配置执行可选任务
-        if (config.加入圈子) joinCircleActivity(); // 
-        if (config.小程序签到) miniAppSign();
-        if (config.拔萝卜) carrotActivity();
-        if (config.米粉节) fansActivity(); // 
-        if (config.观看视频) watchVideoTask();
-        if (config.双旗舰) dualFlagshipActivity(); //
-        if (config.感恩季) thanksgivingActivity(); //
-        if (isInSignPage()) {
-            recordLevel();
-        }
-        // 推送
-        if (config.推送至微信 != 1 && config.推送至微信 != 2) {
-            log("未配置推送");
-        } else {
-            log("开始推送");
-            let title = "小米社区签到任务完成";
-            let channel, token;
-            if (config.推送至微信 == 1) {
-                channel = "serverChan";
-                token = config.serverChanToken;
-            } else if (config.推送至微信 == 2) {
-                channel = "pushPlus";
-                token = config.pushPlusToken;
-            }
-            console.log("推送渠道: " + channel);
-            require("./pushToWechat.js")(channel, token, title, pushContent);
-        }
-        log("所有配置的任务已执行完毕");
+        for (var i = 0; i < ts.list.length; i++) runTask(ts.list[i]);
+        log.setTag(logger.TAG.push);
+        log.info("任务启动");
+        var pushOk = ps.send(ctx);
+        log.info("任务结果：" + (pushOk ? "成功" : "失败"));
     } catch (e) {
-        console.error(`主程序发生未捕获错误: ${e}`);
+        log.setTag(logger.TAG.main);
+        log.error("主流程异常：" + e);
     } finally {
-        // 6. 结束应用并返回主页 (可选)
-        killApp(packageName);
+        log.setTag(logger.TAG.main);
+        dev.kill(ctx);
         home();
-        log("操作完成，已返回主页");
-        exit()
+        exit();
     }
 }
+
+main();
