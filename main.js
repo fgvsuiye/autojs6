@@ -54,6 +54,7 @@ var h = device.height;
 var today = rt.date(new Date());
 var start = new Date().getTime();
 var state = { cx: 0, cy: 0, push: "" };
+logger.checkLogSize(sys.logFile);
 var log = logger.create(cfg.运行.日志等级, sys.logFile);
 log.setTag(logger.TAG.main);
 u.setLogger(log);
