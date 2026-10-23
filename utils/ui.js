@@ -75,7 +75,7 @@ function wait(fn, times, gap, name) {
             sleep(gap);
         }
     }
-    if (logger) logger.log("等待超时：" + title + "，耗时 " + (new Date().getTime() - begin) + "ms");
+    if (logger) logger.warn("等待超时：" + title + "，耗时 " + (new Date().getTime() - begin) + "ms");
     return false;
 }
 
@@ -84,7 +84,13 @@ function delay(ms, reason) {
     ms = Number(ms);
     if (!isFinite(ms) || ms < 0) return;
     if (logger) logger.log("等待 " + ms + "ms" + (reason ? "：" + reason : ""));
-    sleep(ms);
+    try {
+        sleep(ms);
+    } catch (e) {
+        try {
+            java.lang.Thread.sleep(ms);
+        } catch (eThread) {}
+    }
 }
 
 module.exports = { setLogger: setLogger, center: center, click: clickObj, wait: wait, sleep: delay };

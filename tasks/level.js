@@ -16,24 +16,39 @@ function findCommonSub(a, b) {
 /** 读取签到和成长值页面，生成今日任务报告并保存推送内容。 */
 function run(ctx) {
     if (!ctx.isSign()) { ctx.log.log("当前不在签到页面，跳过积分记录"); return true; }
-    var pick = pickup;
 
     try {
         ctx.log.log("读取今日签到及任务数据");
-        var signText = pick(textMatch(/已连续签到 (\d{1,4}) 天/), "text");
-        var days = signText ? signText.split(" ")[1] : "0";
+        var signObj = textMatches(/已连续签到 (\d{1,4}) 天/).findOne(ctx.sys.short);
+        var signText = signObj ? signObj.text() : "";
+        var days = signText ? (signText.split(" ")[1] || "0") : "0";
         ctx.log.debug("连续签到文本：" + signText);
+
+        var diObj = text("每日任务").findOne(ctx.sys.short);
+        var niObj = text("新手任务").findOne(ctx.sys.short);
+        var dhObj = text("每日签到").findOne(ctx.sys.short);
+
+        var di = diObj ? diObj.indexInParent() : -1;
+        var ni = niObj ? niObj.indexInParent() : 999;
+        var dh = (dhObj && dhObj.bounds()) ? dhObj.bounds().height() : 0;
+        var pid = (dhObj && dhObj.parent()) ? dhObj.parent().id() : "";
+
         var all = className("android.widget.TextView").find();
-        var di = pick(text("每日任务"), "indexInParent");
-        var ni = pick(text("新手任务"), "indexInParent");
-        var dh = pick(text("每日签到"), "boundsHeight");
-        var pid = pick(text("每日签到"), "p1", "id");
-        var list = all.filter(function (item) {
-            var idx = item.indexInParent();
-            var bh = detect(item, "boundsHeight");
-            var p = detect(item, "p1", "id");
-            return idx > di && idx < ni && Math.abs(bh - dh) < 2 && p == pid;
-        }).map(function (item) { return item.text(); });
+        var list = [];
+        if (all && all.size() > 0) {
+            for (var aIdx = 0; aIdx < all.size(); aIdx++) {
+                try {
+                    var itemNode = all.get(aIdx);
+                    var idx = itemNode.indexInParent();
+                    var b = itemNode.bounds();
+                    var bh = b ? b.height() : 0;
+                    var p = itemNode.parent() ? itemNode.parent().id() : "";
+                    if (idx > di && idx < ni && Math.abs(bh - dh) < 2 && p == pid) {
+                        list.push(itemNode.text());
+                    }
+                } catch (eItem) {}
+            }
+        }
 
         ctx.log.log("查找社区成长等级入口");
         var entry = text("社区成长等级").findOne(ctx.sys.wait);
@@ -52,16 +67,23 @@ function run(ctx) {
         ctx.log.log("读取今日积分明细");
         var items = className("android.widget.TextView").textContains(today).find();
         ctx.log.debug("今日积分记录数量：" + (items ? items.size() : 0));
-        if (items && items.nonEmpty()) {
-            items.forEach(function (item) {
+        if (items && items.size() > 0) {
+            for (var itIdx = 0; itIdx < items.size(); itIdx++) {
                 try {
-                    var name = item.previousSibling().text();
-                    var pt = item.nextSibling().text();
-                    var p = parseInt(pt.replace("+", ""));
-                    done[name] = done.hasOwnProperty(name) ? parseInt(done[name]) + p : pt;
-                    total += p;
-                } catch (e) {}
-            });
+                    var curItem = items.get(itIdx);
+                    var parentNode = curItem.parent();
+                    var itemIdx = curItem.indexInParent();
+                    var prevNode = (parentNode && itemIdx > 0) ? parentNode.child(itemIdx - 1) : null;
+                    var nextNode = (parentNode && itemIdx + 1 < parentNode.childCount()) ? parentNode.child(itemIdx + 1) : null;
+                    var name = prevNode ? prevNode.text() : "";
+                    var pt = nextNode ? nextNode.text() : "";
+                    if (name && pt) {
+                        var pVal = parseInt(pt.replace("+", ""), 10) || 0;
+                        done[name] = done.hasOwnProperty(name) ? (parseInt(done[name], 10) + pVal) : pt;
+                        total += pVal;
+                    }
+                } catch (eParse) {}
+            }
         }
 
         for (var i = 0; i < list.length; i++) {
@@ -75,15 +97,35 @@ function run(ctx) {
 
         lines.push("-----", "* 当前信息", "", "| 项目 | 状态 |", "|---|---|", "| 今日总计 | " + total + " |");
         ctx.log.log("读取当前成长值和等级");
-        var cur = pick(textMatch(/成长值 (\d{1,5})\/(\d{1,5})/), "text");
-        var level = pick(textContains("段").boundsCenterX(0.4, 0.6), "text");
+        var curObj = textMatches(/成长值 (\d{1,5})\/(\d{1,5})/).findOne(ctx.sys.short);
+        var cur = curObj ? curObj.text() : "";
+
+        var level = "";
+        var segs = textContains("段").find();
+        if (segs && segs.size() > 0) {
+            for (var sIdx = 0; sIdx < segs.size(); sIdx++) {
+                var seg = segs.get(sIdx);
+                var sb = seg.bounds();
+                if (sb) {
+                    var cxRatio = sb.centerX() / ctx.w;
+                    if (cxRatio >= 0.35 && cxRatio <= 0.65) {
+                        level = seg.text();
+                        break;
+                    }
+                }
+            }
+            if (!level && segs.size() > 0) {
+                level = segs.get(0).text();
+            }
+        }
+
         var now = null;
         var max = null;
         if (cur) {
             var cm = String(cur).match(/(\d{1,5})\/(\d{1,5})/);
             if (cm) {
-                now = parseInt(cm[1]);
-                max = parseInt(cm[2]);
+                now = parseInt(cm[1], 10);
+                max = parseInt(cm[2], 10);
             }
         }
         lines.push("| 今日任务完成 | " + count + " / " + list.length + " |", "| 连续签到天数 | " + days + " |");
@@ -94,7 +136,11 @@ function run(ctx) {
         lines.push(count != list.length ? "* ⚠️ **注意** 今日有任务未完成，请打开社区检查\n" : "* ✅ 所有任务已完成");
         ctx.log.debug("积分汇总：total=" + total + ", completed=" + count + "/" + list.length + ", current=" + now + ", level=" + level);
         if (now !== null) {
-            try { files.append("./tmp/level.txt", "\n" + ctx.today + "：今日：+" + String(total).padEnd(5, " ") + " 当前 " + (level || "未知") + " 总计：" + now + "/" + max); } catch (e) {}
+            try {
+                var totStr = String(total);
+                while (totStr.length < 5) totStr += " ";
+                files.append("./tmp/level.txt", "\n" + ctx.today + "：今日：+" + totStr + " 当前 " + (level || "未知") + " 总计：" + now + "/" + max);
+            } catch (e) {}
         }
         ctx.state.push = lines.join("\n");
         ctx.log.log("积分报告生成完成，共 " + lines.length + " 行");

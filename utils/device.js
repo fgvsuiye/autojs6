@@ -69,20 +69,22 @@ function doUnlock(ctx) {
 function unlock(ctx, max) {
     ctx.log.setTag(ctx.log.tags.unlock);
     ctx.log.info("任务启动");
-    var km = context.getSystemService(Context.KEYGUARD_SERVICE);
-    if (!km.inKeyguardRestrictedInputMode()) {
+    var keyguardKey = (typeof Context !== "undefined" && Context.KEYGUARD_SERVICE) ? Context.KEYGUARD_SERVICE : "keyguard";
+    var km = context.getSystemService(keyguardKey);
+    if (!km || !km.inKeyguardRestrictedInputMode()) {
         ctx.log.log("设备未锁定");
         return true;
     }
     for (var i = 1; i <= max; i++) {
         ctx.log.log("第 " + i + " / " + max + " 次尝试解锁");
         if (doUnlock(ctx)) {
-            km = context.getSystemService(Context.KEYGUARD_SERVICE);
-            if (!km.inKeyguardRestrictedInputMode()) { ctx.log.info("任务结果：成功"); return true; }
+            km = context.getSystemService(keyguardKey);
+            if (!km || !km.inKeyguardRestrictedInputMode()) { ctx.log.info("任务结果：成功"); return true; }
         }
         ctx.u.sleep(ctx.sys.short);
     }
-    ctx.log.error("解锁失败");
+    ctx.log.error("解锁失败，无法进入系统");
+    ctx.log.diag("解锁失败状态");
     return false;
 }
 
@@ -93,34 +95,46 @@ function kill(ctx) {
         app.openAppSetting(ctx.sys.pkg);
         ctx.u.sleep(1500);
         var btn = textMatches(/(结束运行|强行停止|FORCE STOP|Force stop)/).findOne(ctx.sys.wait);
-        if (btn && btn.enabled() && click(btn)) {
-            ctx.log.log("点击结束运行按钮");
-            var ok = textMatches(/(确定|OK)/).findOne(ctx.sys.short);
-            if (ok) click(ok);
-            ctx.log.log("确认结束应用");
+        if (btn && btn.enabled()) {
+            ctx.u.click(btn, "结束运行");
+            var ok = textMatches(/(确定|OK|强行停止)/).findOne(ctx.sys.short);
+            if (ok) {
+                ctx.u.click(ok, "确认强行停止");
+            }
         }
+        ctx.u.sleep(500);
+        back(); // 退出应用设置界面，避免遮挡
+        ctx.u.sleep(1000);
     } catch (e) {
         ctx.log.error("结束应用异常：" + e);
     }
-    ctx.u.sleep(1000);
 }
 
 /** 重启小米社区，并等待首页签到入口出现。 */
 function restart(ctx, first) {
     kill(ctx);
-    if (!app.launch(ctx.sys.pkg)) return false;
+    ctx.u.sleep(500);
+    ctx.log.log("尝试启动小米社区: " + ctx.sys.pkg);
+    if (!app.launch(ctx.sys.pkg)) {
+        ctx.log.error("启动小米社区失败：" + ctx.sys.pkg);
+        return false;
+    }
     var ready = ctx.u.wait(function () {
         return !!desc(ctx.ui.sign).findOne(ctx.sys.wait);
-    }, 2, ctx.sys.short, "等待社区首页");
+    }, 3, ctx.sys.short, "等待社区首页");
     var allow = textMatches(/(允许|允许使用|Allow)/).findOne(1000);
     if (allow) ctx.u.click(allow, "处理权限弹窗");
-    if (!first) ctx.u.click(desc(ctx.ui.sign).findOne(ctx.sys.short), "点击签到");
+    if (!first) {
+        var signEntry = desc(ctx.ui.sign).findOne(ctx.sys.short);
+        if (signEntry) ctx.u.click(signEntry, "点击签到入口");
+    }
     return ready;
 }
 
 /** 尝试关闭启动广告。 */
 function skipAd(ctx) {
-    var btn = contentMatches(/(关闭|跳过|Skip)/).findOne(2000) ||
+    var btn = descMatches(/(关闭|跳过|Skip)/).findOne(2000) ||
+        textMatches(/(关闭|跳过|Skip)/).findOne(1000) ||
         idMatches(/.*(close|skip|cancel).*/).findOne(1000);
     return !!(btn && ctx.u.click(btn, "跳过启动广告"));
 }

@@ -22,10 +22,10 @@ function run(ctx) {
                 return false;
             }, 3, 2000, "小程序签到");
         } else {
-            {
-                click(cX(886), cY(1184));
-                ctx.u.sleep(1000, "等待微信页面稳定");
-            }
+            var clickX = (typeof cX === "function") ? cX(886) : Math.round(ctx.w * 886 / 1080);
+            var clickY = (typeof cY === "function") ? cY(1184) : Math.round(ctx.h * 1184 / 2400);
+            click(clickX, clickY);
+            ctx.u.sleep(1000, "等待微信页面稳定");
         }
     } catch (e) {
         ctx.log.error("程序签到异常：" + e);

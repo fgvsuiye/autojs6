@@ -1,0 +1,10 @@
+{
+  "name": "小米社区自动任务",
+  "versionName": "4.1.0",
+  "versionCode": 410,
+  "packageName": "com.xiaomi.vipaccount",
+  "main": "main.js",
+  "launchConfig": {
+    "hideLogs": false
+  }
+}
