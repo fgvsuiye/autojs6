@@ -7,11 +7,24 @@ function run(ctx) {
         if (store.get("isFirstParticipation") !== true) {
             var reg = className("android.widget.Button").text("立即报名").findOne(3000);
             if (reg) {
-                detect(reg, "s>1", "click");
+                try {
+                    if (typeof detect === "function") {
+                        detect(reg, "s>1", "click");
+                    } else if (reg.parent() && reg.parent().childCount() > 1) {
+                        reg.parent().child(1).click();
+                    }
+                } catch (eDet) {}
                 ctx.u.sleep(300);
                 ctx.u.click(reg, "点击立即报名");
                 ctx.u.sleep(300);
-                pickup(textContains("确定"), "click");
+                try {
+                    if (typeof pickup === "function") {
+                        pickup(textContains("确定"), "click");
+                    } else {
+                        var okBtn = textContains("确定").findOne(2000);
+                        if (okBtn) ctx.u.click(okBtn, "点击确定");
+                    }
+                } catch (ePick) {}
                 store.put("isFirstParticipation", true);
             }
         }

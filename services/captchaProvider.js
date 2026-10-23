@@ -30,12 +30,50 @@ function solve(path, opt) {
             token: String(token),
             type: P.type
         });
-        if (!res || !res.body) return null;
+        if (!res || !res.body) {
+            if (opt.log) opt.log.error("验证码服务无响应");
+            return null;
+        }
         var body = res.body.string();
-        if (opt.log) opt.log.debug("验证码 HTTP 状态：" + res.statusCode);
-        if (P.debug && opt.log) opt.log.debug("验证码原始响应：" + body);
-        let res_data = body.split('data":"')[1].split('","time')[0];
-        return res_data;
+        if (opt.log) opt.log.log("验证码接口响应：" + body);
+
+        var resultData = null;
+        try {
+            var json = JSON.parse(body);
+            if (json) {
+                if (json.data) {
+                    if (typeof json.data === "string") resultData = json.data;
+                    else if (typeof json.data === "object" && json.data.data) resultData = String(json.data.data);
+                }
+                if (!resultData && json.result) {
+                    if (typeof json.result === "string") resultData = json.result;
+                    else if (typeof json.result === "object" && json.result.data) resultData = String(json.result.data);
+                }
+                if (!resultData && json.msg && json.code !== 10000) {
+                    if (opt.log) opt.log.error("验证码服务提示: " + json.msg + " (code=" + json.code + ")");
+                }
+            }
+        } catch (eJson) {}
+
+        // 原版字符串提取方式兜底
+        if (!resultData && body.indexOf('data":"') !== -1) {
+            try {
+                resultData = body.split('data":"')[1].split('","time')[0].split('"')[0];
+            } catch (eSplit) {}
+        }
+        if (!resultData) {
+            var m = body.match(/"data"\s*:\s*"([^"]+)"/);
+            if (m) resultData = m[1];
+        }
+
+        if (resultData) {
+            resultData = String(resultData).trim();
+            if (opt.log) opt.log.log("验证码解析成功，提取坐标: " + resultData);
+            return resultData;
+        } else {
+            if (opt.log) opt.log.error("未能解析出验证码坐标数据");
+            return null;
+        }
     } catch (e) {
         if (opt.log) opt.log.error("验证码服务异常：" + e);
         return null;
