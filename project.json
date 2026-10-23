@@ -1,8 +1,8 @@
 {
   "name": "小米社区自动任务",
-  "versionName": "3.13.0",
-  "versionCode": 313,
-  "packageName": "com.xiaomi.vipaccount.sign",
+  "versionName": "4.1.0",
+  "versionCode": 410,
+  "packageName": "com.xiaomi.vipaccount",
   "main": "main.js",
   "launchConfig": {
     "hideLogs": false

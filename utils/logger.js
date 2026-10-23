@@ -43,6 +43,34 @@ function nowTime() {
     return y + "-" + m + "-" + day + " " + h + ":" + min + ":" + s + "." + ms;
 }
 
+/**
+ * 启动时检查日志大小。当前日志超过 1 MB 时，将最后 1 MB 日志覆盖写入备份，
+ */
+function checkLogSize(logFile) {
+    var maxSize = 1024 * 1024;
+    var actualPath = files.path(logFile);
+    var backupPath = actualPath + ".bak";
+    try {
+        files.ensureDir(logFile);
+        var logFileObj = new java.io.File(actualPath);
+        if (!logFileObj.exists() || logFileObj.length() <= maxSize) {
+            return;
+        }
+        var logBytes = files.readBytes(actualPath);
+        var start = Math.max(0, logBytes.length - maxSize);
+        var backupBytes = java.util.Arrays.copyOfRange(
+            logBytes,
+            start,
+            logBytes.length
+        );
+        files.writeBytes(backupPath, backupBytes);
+        files.write(actualPath, "");
+        console.log("日志维护完成，已备份最近 1 MiB 日志");
+    } catch (e) {
+        console.warn("日志维护失败：" + e);
+    }
+}
+
 /** 创建统一日志对象。 */
 function create(level, logFile) {
     level = Number(level);
@@ -149,4 +177,8 @@ function create(level, logFile) {
     };
 }
 
-module.exports = { create: create, TAG: TAG };
+module.exports = {
+    create: create,
+    TAG: TAG,
+    checkLogSize: checkLogSize
+};
