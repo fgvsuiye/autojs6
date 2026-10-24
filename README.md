@@ -7,12 +7,12 @@
   <br />
   <a href="https://github.com/fgvsuiye/autojs6/releases">下载最新版本</a>
   ·
-  <a href="#">报告 Bug</a>
+  <a href="https://github.com/fgvsuiye/autojs6/issues">报告 Bug</a>
   ·
-  <a href="#">提出新功能</a>
+  <a href="https://github.com/fgvsuiye/autojs6/issues/new">提出新功能</a>
 </p>
 
-[![版本](https://img.shields.io/badge/Version-v4.1-blue.svg)](https://github.com/fgvsuiye/autojs6/releases)
+[![版本](https://img.shields.io/badge/Version-v4.1.2-blue.svg)](https://github.com/fgvsuiye/autojs6/releases)
 [![兼容性](https://img.shields.io/badge/AutoX_v7-兼容-brightgreen.svg)](https://github.com/aiselp/AutoX)
 [![兼容性](https://img.shields.io/badge/AutoJs6-兼容-brightgreen.svg)](https://github.com/SuperMonster003/AutoJs6/releases)
 [![原作者](https://img.shields.io/badge/原作者-@PJxiaoyu-orange.svg)](#)
@@ -65,14 +65,16 @@
 ### 1. 环境准备
 - 下载并安装 **AutoX.js v7**（推荐）或 **AutoJs6**。
   - [➡️ 前往 AutoX.js 仓库 (aiselp/AutoX)](https://github.com/aiselp/AutoX)
-- 授予应用必要的权限，如：**无障碍服务**、**后台弹出界面**、**截图** 等。
+  - [➡️ 前往 AutoJs6 仓库 (SuperMonster003/AutoJs6)](https://github.com/SuperMonster003/AutoJs6)
+- 授予应用必要的权限，如：**无障碍服务**、**后台弹出界面**、**修改系统设置**、**shizuku** 等。
 
 ### 2. 下载项目
-- 下载本项目的最新代码，并放置于您的 Auto.js 工作目录。
+- 将本项目克隆到 Auto.js 工作目录，并在之后通过 Git 拉取更新。请保留同一个项目目录；若删除并重新下载整个目录，请先备份 `config/config.local.js`。
 
 ### 3. 修改配置
-- 使用文本编辑器打开项目中的 `config/config.js` 文件。
-- 根据您的设备情况修改配置项（如解锁方式、帖子浏览篇数、云码 Token 等）。
+- 首次配置时，将 `config/config.local.example.js` 复制为 `config/config.local.js`，之后可直接修改任意选项。
+- 在 `config/config.local.js` 中填写个人设置，如解锁密码和 Token。
+- `config/config.js` 是项目默认配置，请勿在其中填写个人信息或 Token。
 
 ### 4. 给予权限
 - 在 Auto.js 中，确保脚本所需的权限（无障碍、截屏权限）已正常授权。
@@ -85,36 +87,36 @@
 ## ✨ 功能配置
 
 ### 帖子浏览篇数配置
-在 `config/config.js` 中配置 `浏览帖子` 字段即可设置目标篇数（例如 `10` 篇），脚本会自动滑动轮巡：
-单次浏览用时6-9秒，建议设置2-3次。
+在 `config/config.local.js` 的 `任务.浏览帖子` 中配置目标篇数（例如 `10` 篇），脚本会自动滑动轮巡：
+单次浏览用时11-15秒，建议设置1-2次。
 ```javascript
-任务: {
-    签到: 1,
-    浏览帖子: 3, // 自定义浏览篇数，为 0 时跳过
-    ...
-}
+module.exports = {
+    任务: {
+        浏览帖子: 3 // 自定义浏览篇数，为 0 时跳过
+    }
+};
 ```
 
 ### 微信消息推送
 如果需要将脚本运行结果推送到微信：
-1. 在 `config.js` 文件中找到并启用 `推送` 选项（方式 1 为 ServerChan，方式 2 为 PushPlus）。
+1. 在 `config/config.local.js` 中启用 `推送` 选项（方式 1 为 ServerChan，方式 2 为 PushPlus）。
 2. 获取推送服务的 Token：
    * **ServerChan**: [点击前往注册](https://sct.ftqq.com/)
    * **PushPlus**: [点击前往注册](https://pushplus.hxtrip.com/)
-3. 将获取到的 Token 填入 `config.js` 中对应的配置项。
+3. 将获取到的 Token 填入 `config/config.local.js` 中对应的配置项。
 
 ### 验证码识别
 签到功能依赖第三方验证码识别服务，目前适配 **云码** 平台：
 1. 注册并获取 Token：
    * **云码**: [点击前往注册](https://www.jfbym.com/)
 2. 进入个人中心获取我的账号 Token。
-3. 将获取到的 Token 填入 `config/config.js` 的 `验证码.token` 字段。
+3. 将获取到的 Token 填入 `config/config.local.js` 的 `验证码.token` 字段。
 
 <br>
 
 ## 💡 注意事项
 
-* **权限设置**: 请确保系统设置中为 Auto.js 授予了 **无障碍服务** 和 **截图** 权限。
+* **权限设置**: 请确保系统设置中为 Auto.js 授予了 **无障碍服务** 和 **媒体投影权限** 。
 * **屏幕遮挡**: 建议不要开启 Auto.js 悬浮窗或控制台悬浮遮罩，以免遮挡验证码弹窗。
 * **锁屏时间**: 建议将系统的自动锁屏时间设置为不低于 30 秒，防止执行长任务时灭屏。
 
@@ -124,6 +126,13 @@
 
 <details>
 <summary>点击展开查看历史更新</summary>
+
+### V4.1.2 (261024)
+> 1. `修复` 浏览帖子中多个帖子浏览时长并不会累计，修复单次浏览时长小于10秒导致任务失败的问题。
+> 2. `优化` 新增模板配置文件，可自动合并本地配置与默认配置，无需手动复制配置。
+> 3. `优化` 更新至此版本之前，请将你的`config/config.js` 重命名为 `config.local.js`。  
+   
+ ***config.local.js 为最终配置文件，需要修改配置请修改此配置，此配置不会随更新而被覆盖。***
 
 ### V4.1 (261023)
 > 1. `优化` 浏览帖子支持自定义循环篇数（默认浏览 3 篇），自动滑动翻页防重。

@@ -26,7 +26,7 @@ function timer(ms, logger) {
             sleep(ms);
             if (logger) {
                 logger.setTag(logger.tags.main);
-                logger.error("【关键中断】脚本运行已达到设定总时长限制 (" + (ms / 1000) + " 秒)，强制终止退出！如需延长请在 config/config.js 中调大【运行.总时长】");
+                logger.error("【关键中断】脚本运行已达到设定总时长限制 (" + (ms / 1000) + " 秒)，强制终止退出！如需延长请在 config/config.local.js 中调大【运行.总时长】");
                 logger.diag("运行超时中断");
             }
             exit();

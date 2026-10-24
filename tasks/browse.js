@@ -36,11 +36,11 @@ function run(ctx) {
         }
 
         if (postObj && ctx.u.click(postObj, "打开帖子")) {
-            ctx.u.sleep(random(3000, 4500), "初览帖子");
+            ctx.u.sleep(random(5500, 7500), "初览帖子");
             swipe(w * 0.5, h * 0.75, w * 0.5, h * 0.3, random(350, 500));
-            ctx.u.sleep(random(3000, 4500), "细览帖子");
+            ctx.u.sleep(random(5500, 7500), "细览帖子");
             back();
-            ctx.u.sleep(1200, "返回信息流");
+            ctx.u.sleep(1000, "返回信息流");
             count++;
             failCount = 0;
             ctx.log.info("已完成第 " + count + "/" + target + " 篇浏览");

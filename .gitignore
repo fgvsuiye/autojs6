@@ -5,3 +5,4 @@ node_modules/
 .idea/
 .vscode/
 *.tmp
+config/config.local.js

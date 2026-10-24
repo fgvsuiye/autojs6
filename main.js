@@ -41,7 +41,7 @@ var uiTexts = {
     feature2: "社区成长等级"
 };
 
-var cfg = require("./config/config.js");
+var cfg = require("./config/index.js");
 var u = require("./utils/ui.js");
 var dev = require("./utils/device.js");
 var rt = require("./utils/runtime.js");
