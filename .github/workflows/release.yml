@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - .github/workflows/release.yml
+      - .gitignore
+      - project.json
+      - README.md
+      - '**/*.md'
 
 jobs:
   create-release:
@@ -13,61 +19,53 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
 
-      - name: Get current date
-        id: date
-        run: echo "tag_date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
-
-      - name: Get Short SHA
-        id: short_sha
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - name: Get release metadata
+        id: release
+        run: |
+          echo "tag_date=$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+        shell: bash
 
       - name: Extract latest changelog
         id: changelog_extractor
         run: |
-          # awk 逻辑:
-          # 1. 当遇到以 "### V" + 数字 开头的行 (版本标题):
-          #    a. 如果 'in_block' 标志已经为 true (意味着我们已在处理上一个版本块，现在遇到了新的版本块)，则立即退出 awk。
-          #    b. 否则，设置 'in_block' 标志为 true，表示我们开始进入最新的日志块。
-          # 2. 如果 'in_block' 标志为 true (即我们在最新的日志块内)，则打印当前行。
-          LATEST_CHANGELOG=$(awk '
-            /^### V[0-9]/ {
-              if (in_block) {
-                exit
+          delimiter="$(openssl rand -hex 16)"
+          {
+            printf 'changelog_text<<%s\n' "$delimiter"
+            awk '
+              /^### V[0-9]/ {
+                if (in_block) {
+                  exit
+                }
+                in_block = 1
               }
-              in_block = 1
-            }
-            in_block {
-              print
-            }
-          ' README.md)
-
-          # 将多行内容安全地设置为输出变量
-          echo "changelog_text<<EOF" >> $GITHUB_OUTPUT
-          echo "$LATEST_CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+              in_block {
+                print
+              }
+            ' README.md
+            printf '%s\n' "$delimiter"
+          } >> "$GITHUB_OUTPUT"
         shell: bash
 
       - name: Create project ZIP
         run: |
-          zip -r project_${{ steps.date.outputs.tag_date }}_${{ steps.short_sha.outputs.sha }}.zip . -x ".git/*" -x ".github/*"
+          git archive --format=zip --output="project_${{ steps.release.outputs.tag_date }}_${{ steps.release.outputs.sha }}.zip" HEAD -- . ':(exclude).github/**'
+        shell: bash
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.date.outputs.tag_date }}-${{ steps.short_sha.outputs.sha }}
-          name: Release ${{ steps.date.outputs.tag_date }}-${{ steps.short_sha.outputs.sha }}
+          tag_name: v${{ steps.release.outputs.tag_date }}-${{ steps.release.outputs.sha }}
+          name: Release ${{ steps.release.outputs.tag_date }}-${{ steps.release.outputs.sha }}
           body: |
             使用说明:
               下载项目 ZIP 文件，解压至工作目录后阅读 README.md 文件，了解项目使用方法和注意事项。
               工作目录默认为 /storage/emulated/0/脚本/
             ${{ steps.changelog_extractor.outputs.changelog_text }}
           files: |
-            project_${{ steps.date.outputs.tag_date }}_${{ steps.short_sha.outputs.sha }}.zip
-            main.js
+            project_${{ steps.release.outputs.tag_date }}_${{ steps.release.outputs.sha }}.zip
           draft: false
           prerelease: false
         env:
