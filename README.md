@@ -12,7 +12,7 @@
   <a href="https://github.com/fgvsuiye/autojs6/issues/new">提出新功能</a>
 </p>
 
-[![版本](https://img.shields.io/badge/Version-v4.1.3-blue.svg)](https://github.com/fgvsuiye/autojs6/releases)
+[![版本](https://img.shields.io/badge/Version-v4.1.4-blue.svg)](https://github.com/fgvsuiye/autojs6/releases)
 [![兼容性](https://img.shields.io/badge/AutoX_v7-兼容-brightgreen.svg)](https://github.com/aiselp/AutoX)
 [![兼容性](https://img.shields.io/badge/AutoJs6-兼容-brightgreen.svg)](https://github.com/SuperMonster003/AutoJs6/releases)
 [![原作者](https://img.shields.io/badge/原作者-@PJxiaoyu-orange.svg)](#)
@@ -127,10 +127,14 @@ module.exports = {
 <details>
 <summary>点击展开查看历史更新</summary>
 
+### V4.1.4 (261025)
+> 1. `修复` device.keepScreenOn会点亮屏幕导致解锁时device.isScreenOn结果不符合预期。
+
 ### V4.1.3 (261025)
 > 1. `修复` 解锁时时密码/图案界面可能会被误判，导致解锁失败的问题。
 > 2. `新增` 添加了防误触模式的判断。
 >
+
 ### V4.1.2 (261024)
 > 1. `修复` 浏览帖子中多个帖子浏览时长并不会累计，修复单次浏览时长小于10秒导致任务失败的问题。
 > 2. `优化` 新增模板配置文件，可自动合并本地配置与默认配置，无需手动复制配置。    
@@ -140,6 +144,7 @@ module.exports = {
 > 更新至此版本 --> 请将你的`config/config.js` 重命名为 `config.local.js`。            
 >     
 > ***config.local.js 为最终配置文件，需要修改配置请修改此配置，此配置不会随更新而被覆盖。***
+
 ### V4.1 (261023)
 > 1. `优化` 浏览帖子支持自定义循环篇数（默认浏览 3 篇），自动滑动翻页防重。
 > 2. `修复` 解决截屏权限申请时跳转 AutoX.js 导致社区验证码弹窗丢失焦点的问题。

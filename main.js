@@ -1,5 +1,4 @@
 require("./utils/compat.js");
-
 try {
     if (typeof engines !== "undefined" && engines.myEngine && engines.all) {
         var curEngine = engines.myEngine();
@@ -126,9 +125,11 @@ function init() {
     if (typeof setScaleBases === "function") {
         setScaleBases(1080, 2400);
     }
-    device.keepScreenOn(sys.keep);
     rt.timer(Number(cfg.运行.总时长) * 1000, log);
     device.setMusicVolume(0);
+    }
+
+function preparecapCapture(){
     try {
         log.info("申请全局截图权限...");
         if (!requestScreenCapture()) {
@@ -177,6 +178,7 @@ function main() {
         }
 
         log.setTag(logger.TAG.main);
+        preparecapCapture()
         log.info("--- 启动并准备小米社区 ---");
         dev.restart(ctx, true);
         dev.skipAd(ctx);

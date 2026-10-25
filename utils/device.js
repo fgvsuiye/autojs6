@@ -7,12 +7,11 @@
 importClass(android.content.Context);
 
 /** 根据配置执行一次解锁动作。 */
-function doUnlock(ctx) {
+function doUnlock(ctx, screenOn) {
     var c = ctx.cfg.解锁;
     var s = ctx.sys;
     var off = random(-150, 150);
-
-    if (!device.isScreenOn()) {
+    if (!screenOn) {
         ctx.log.log("屏幕未点亮，尝试唤醒...");
         device.wakeUp();
         ctx.u.sleep(s.short);
@@ -26,7 +25,6 @@ function doUnlock(ctx) {
             ctx.log.log("已按音量+退出防误触模式，继续解锁流程");
         }
     }
-
     if (c.方式 != 1 && c.方式 != 2) {
         ctx.log.log("解锁方式不支持，跳过解锁动作。");
         swipe(ctx.w / 2, ctx.h * .7 + off, ctx.w / 2, ctx.h * .3 + off, s.swipe);
@@ -39,8 +37,9 @@ function doUnlock(ctx) {
         if (ctx.u.wait(function () {
             ctx.log.log("等待解锁界面...");
             swipe(ctx.w / 2, ctx.h * .7 + off, ctx.w / 2, ctx.h * .3 + off, s.swipe);
-            return textMatches(/.*?(紧急呼叫|Emergency call|图案|数字|混合|Pattern|PIN|Password).*?/).findOne(3000);
-        }, 2, 1000, "解锁界面")) {
+            ctx.u.sleep(1000);
+            return textMatches(/.*?(紧急呼叫|Emergency call|图案|数字|混合|Pattern|PIN|Password).*?/).findOne(2000);
+        }, 2, 500, "解锁界面")) {
             visible = true;
             break;
         }
@@ -76,6 +75,8 @@ function doUnlock(ctx) {
 function unlock(ctx, max) {
     ctx.log.setTag(ctx.log.tags.unlock);
     ctx.log.info("任务启动");
+    var screenOn = device.isScreenOn()
+    device.keepScreenOn(ctx.sys.keep)
     var keyguardKey = (typeof Context !== "undefined" && Context.KEYGUARD_SERVICE) ? Context.KEYGUARD_SERVICE : "keyguard";
     var km = context.getSystemService(keyguardKey);
     if (!km || !km.inKeyguardRestrictedInputMode()) {
@@ -84,7 +85,7 @@ function unlock(ctx, max) {
     }
     for (var i = 1; i <= max; i++) {
         ctx.log.log("第 " + i + " / " + max + " 次尝试解锁");
-        if (doUnlock(ctx)) {
+        if (doUnlock(ctx, screenOn)) {
             km = context.getSystemService(keyguardKey);
             if (!km || !km.inKeyguardRestrictedInputMode()) { ctx.log.info("任务结果：成功"); return true; }
         }
