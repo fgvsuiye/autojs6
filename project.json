@@ -1,7 +1,7 @@
 {
   "name": "小米社区自动任务",
-  "versionName": "4.1.2",
-  "versionCode": 412,
+  "versionName": "4.1.3",
+  "versionCode": 413,
   "packageName": "com.xiaomi.vipaccount",
   "main": "main.js",
   "launchConfig": {
