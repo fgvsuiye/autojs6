@@ -17,6 +17,14 @@ function doUnlock(ctx) {
         device.wakeUp();
         ctx.u.sleep(s.short);
         if (!device.isScreenOn()) return false;
+
+        var antiMistouch = textContains("防误触模式").findOne(s.short);
+        if (antiMistouch) {
+            ctx.log.log("检测到防误触模式，等待后按音量+退出...");
+            ctx.u.sleep(1000);
+            KeyCode(24);
+            ctx.log.log("已按音量+退出防误触模式，继续解锁流程");
+        }
     }
 
     if (c.方式 != 1 && c.方式 != 2) {
@@ -31,9 +39,8 @@ function doUnlock(ctx) {
         if (ctx.u.wait(function () {
             ctx.log.log("等待解锁界面...");
             swipe(ctx.w / 2, ctx.h * .7 + off, ctx.w / 2, ctx.h * .3 + off, s.swipe);
-            ctx.u.sleep(500);
-            return textMatches(/.*?(紧急呼叫|Emergency call|图案|数字|混合|Pattern|PIN|Password).*?/).exists();
-        }, 5, 1000, "解锁界面")) {
+            return textMatches(/.*?(紧急呼叫|Emergency call|图案|数字|混合|Pattern|PIN|Password).*?/).findOne(3000);
+        }, 2, 1000, "解锁界面")) {
             visible = true;
             break;
         }
